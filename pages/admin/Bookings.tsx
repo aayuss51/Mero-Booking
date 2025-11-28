@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getBookings, updateBookingStatus } from '../../services/mockDb';
 import { Booking } from '../../types';
-import { Check, X } from 'lucide-react';
+import { Check, X, Loader2 } from 'lucide-react';
 
 export const Bookings: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -27,8 +27,9 @@ export const Bookings: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex flex-col justify-center items-center h-96 gap-4">
+        <Loader2 className="animate-spin text-blue-600" size={48} />
+        <p className="text-gray-500 font-medium animate-pulse">Loading bookings...</p>
       </div>
     );
   }

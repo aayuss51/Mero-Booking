@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getFacilities, saveFacility, deleteFacility } from '../../services/mockDb';
 import { Facility } from '../../types';
 import { Button } from '../../components/Button';
-import { Plus, Trash2, Edit2, Wifi, Car, Coffee, Dumbbell, Waves, Utensils, Tv } from 'lucide-react';
+import { Plus, Trash2, Edit2, Wifi, Car, Coffee, Dumbbell, Waves, Utensils, Tv, Loader2 } from 'lucide-react';
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Wifi, Car, Coffee, Dumbbell, Waves, Utensils, Tv
@@ -43,8 +43,9 @@ export const Facilities: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex flex-col justify-center items-center h-96 gap-4">
+        <Loader2 className="animate-spin text-blue-600" size={48} />
+        <p className="text-gray-500 font-medium animate-pulse">Loading facilities...</p>
       </div>
     );
   }

@@ -34,7 +34,7 @@ const INITIAL_ROOMS: RoomType[] = [
   {
     id: '103',
     name: 'Presidential Garden Suite',
-    description: 'Surrounded by lush tropical gardens, this suite offers unmatched privacy, a jacuzzi, and an expansive master bedroom.',
+    description: 'Surrounded by lush tropical gardens, this suite offers unmatched privacy, and an expansive master bedroom.',
     pricePerNight: 150000,
     capacity: 2,
     totalStock: 5,
@@ -79,13 +79,13 @@ const KEYS = {
 
 // --- Facilities Service ---
 export const getFacilities = async (): Promise<Facility[]> => {
-  await delay(600);
+  await delay(400);
   const stored = localStorage.getItem(KEYS.FACILITIES);
   return stored ? JSON.parse(stored) : INITIAL_FACILITIES;
 };
 
 export const saveFacility = async (facility: Facility): Promise<void> => {
-  await delay(600);
+  await delay(400);
   const current = await getFacilities();
   const exists = current.find(f => f.id === facility.id);
   const updated = exists 
@@ -95,20 +95,26 @@ export const saveFacility = async (facility: Facility): Promise<void> => {
 };
 
 export const deleteFacility = async (id: string): Promise<void> => {
-  await delay(600);
+  await delay(400);
   const current = await getFacilities();
   localStorage.setItem(KEYS.FACILITIES, JSON.stringify(current.filter(f => f.id !== id)));
 };
 
 // --- Rooms Service ---
 export const getRooms = async (): Promise<RoomType[]> => {
-  await delay(600);
+  await delay(400);
   const stored = localStorage.getItem(KEYS.ROOMS);
   return stored ? JSON.parse(stored) : INITIAL_ROOMS;
 };
 
+export const getRoom = async (id: string): Promise<RoomType | undefined> => {
+  await delay(200);
+  const rooms = await getRooms();
+  return rooms.find(r => r.id === id);
+};
+
 export const saveRoom = async (room: RoomType): Promise<void> => {
-  await delay(600);
+  await delay(400);
   const current = await getRooms();
   const exists = current.find(r => r.id === room.id);
   const updated = exists
@@ -118,20 +124,26 @@ export const saveRoom = async (room: RoomType): Promise<void> => {
 };
 
 export const deleteRoom = async (id: string): Promise<void> => {
-  await delay(600);
+  await delay(400);
   const current = await getRooms();
   localStorage.setItem(KEYS.ROOMS, JSON.stringify(current.filter(r => r.id !== id)));
 };
 
 // --- Bookings Service ---
 export const getBookings = async (): Promise<Booking[]> => {
-  await delay(600);
+  await delay(400);
   const stored = localStorage.getItem(KEYS.BOOKINGS);
   return stored ? JSON.parse(stored) : INITIAL_BOOKINGS;
 };
 
+export const getUserBookings = async (userId: string): Promise<Booking[]> => {
+  await delay(400);
+  const bookings = await getBookings();
+  return bookings.filter(b => b.userId === userId);
+};
+
 export const createBooking = async (booking: Omit<Booking, 'id' | 'createdAt' | 'status'>): Promise<Booking> => {
-  await delay(800);
+  await delay(600); // Slightly longer for "processing" feel
   const current = await getBookings();
   const newBooking: Booking = {
     ...booking,
@@ -144,7 +156,7 @@ export const createBooking = async (booking: Omit<Booking, 'id' | 'createdAt' | 
 };
 
 export const updateBookingStatus = async (id: string, status: Booking['status']): Promise<void> => {
-  await delay(600);
+  await delay(400);
   const current = await getBookings();
   const updated = current.map(b => b.id === id ? { ...b, status } : b);
   localStorage.setItem(KEYS.BOOKINGS, JSON.stringify(updated));
@@ -192,7 +204,7 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
 
 export const checkAvailability = async (checkIn: string, checkOut: string): Promise<string[]> => {
     // Returns IDs of rooms that are NOT available
-    await delay(600);
+    await delay(400);
     const bookings = await getBookings();
     const rooms = await getRooms();
     const unavailableRoomIds: string[] = [];

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { getRooms, getFacilities, createBooking, checkAvailability } from '../../services/mockDb';
+import { getRooms, getFacilities, checkAvailability } from '../../services/mockDb';
 import { RoomType, Facility } from '../../types';
 import { Button } from '../../components/Button';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Users, Wifi, Car, Calendar, Star, Coffee, Waves } from 'lucide-react';
+import { Users, Wifi, Car, Calendar, Star, Coffee, Waves, Loader2 } from 'lucide-react';
 
 // Curated High-End Luxury Images
 const HERO_IMAGES = [
@@ -46,6 +46,7 @@ export const Home: React.FC = () => {
 
   const handleSearch = async () => {
     setIsSearching(true);
+    // Simulate slight delay for effect
     const unavailable = await checkAvailability(dates.checkIn, dates.checkOut);
     const allIds = (await getRooms()).map(r => r.id);
     const available = allIds.filter(id => !unavailable.includes(id));
@@ -53,29 +54,18 @@ export const Home: React.FC = () => {
     setIsSearching(false);
   };
 
-  const handleBook = async (room: RoomType) => {
-    if (!user) {
-      alert("Please login to book a room.");
-      navigate('/login');
-      return;
-    }
-
+  const handleBook = (room: RoomType) => {
     const start = new Date(dates.checkIn);
     const end = new Date(dates.checkOut);
-    const nights = Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24));
-    const total = nights * room.pricePerNight;
-
-    if (window.confirm(`Confirm booking for ${room.name}?\n${nights} nights\nTotal: NPR ${total.toLocaleString()}`)) {
-      await createBooking({
-        roomId: room.id,
-        userId: user.id,
-        guestName: user.name,
-        checkIn: dates.checkIn,
-        checkOut: dates.checkOut,
-        totalPrice: total
-      });
-      alert('Booking request sent! Check status in your profile.');
+    
+    if (end <= start) {
+        alert("Check-out date must be after check-in date.");
+        return;
     }
+
+    // Navigate to the summary page. If user is not logged in, ProtectedRoute will catch this
+    // and redirect them to Login, then back here.
+    navigate(`/book?roomId=${room.id}&checkIn=${dates.checkIn}&checkOut=${dates.checkOut}`);
   };
 
   const displayedRooms = availableRoomIds 
@@ -145,9 +135,10 @@ export const Home: React.FC = () => {
              <button 
                 onClick={handleSearch} 
                 disabled={isSearching}
-                className="w-full lg:w-auto h-[50px] px-8 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-lg hover:shadow-blue-600/30 transition-all transform hover:-translate-y-0.5"
+                className="w-full lg:w-auto h-[50px] px-8 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-lg hover:shadow-blue-600/30 transition-all transform hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
              >
-               {isSearching ? 'Searching...' : 'Check Availability'}
+               {isSearching && <Loader2 className="animate-spin" size={20} />}
+               {isSearching ? 'Checking...' : 'Check Availability'}
              </button>
           </div>
         </div>
@@ -247,7 +238,10 @@ export const Home: React.FC = () => {
                      })}
                   </div>
 
-                  <Button onClick={() => handleBook(room)} className="w-full py-4 text-base tracking-wide uppercase font-semibold bg-gray-900 hover:bg-blue-700 transition-colors rounded-xl">
+                  <Button 
+                    onClick={() => handleBook(room)} 
+                    className="w-full py-4 text-base tracking-wide uppercase font-semibold bg-gray-900 hover:bg-blue-700 transition-colors rounded-xl flex items-center justify-center gap-2"
+                  >
                     Reserve Now
                   </Button>
                 </div>

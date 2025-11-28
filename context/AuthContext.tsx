@@ -4,6 +4,7 @@ import { User, UserRole } from '../types';
 interface AuthContextType {
   user: User | null;
   login: (email: string, role: UserRole) => void;
+  register: (name: string, email: string, role: UserRole) => void;
   logout: () => void;
   isLoading: boolean;
 }
@@ -23,16 +24,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const login = (email: string, role: UserRole) => {
-    // Mock login logic
-    let id = 'guest_' + Date.now();
-    let name = email.split('@')[0];
+    let id = '';
+    let name = email.split('@')[0]; // Default name from email if logging in directly
 
-    if (role === 'ADMIN') {
+    // Create a consistent ID based on email for Guests so history is preserved
+    if (role === 'GUEST') {
+      const sanitizedEmail = email.toLowerCase().replace(/[^a-z0-9]/g, '');
+      id = `guest_${sanitizedEmail}`;
+    } else if (role === 'ADMIN') {
       id = 'admin1';
       name = 'Administrator';
     } else if (role === 'SUPER_ADMIN') {
       id = 'super_admin1';
       name = 'Super Admin';
+    }
+
+    const newUser: User = {
+      id,
+      name,
+      email,
+      role
+    };
+    setUser(newUser);
+    localStorage.setItem('hms_user', JSON.stringify(newUser));
+  };
+
+  const register = (name: string, email: string, role: UserRole) => {
+    let id = '';
+    
+    if (role === 'GUEST') {
+      const sanitizedEmail = email.toLowerCase().replace(/[^a-z0-9]/g, '');
+      id = `guest_${sanitizedEmail}`;
+    } else {
+       id = `user_${Date.now()}`;
     }
 
     const newUser: User = {
@@ -51,7 +75,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

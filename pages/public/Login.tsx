@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Button } from '../../components/Button';
 import { UserRole } from '../../types';
 import { Lock, Mail } from 'lucide-react';
@@ -8,6 +8,7 @@ import { Lock, Mail } from 'lucide-react';
 export const Login: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>('GUEST');
@@ -17,21 +18,38 @@ export const Login: React.FC = () => {
     e.preventDefault();
     setError('');
 
-    // Simple Mock Validation
+    // Admin/Super Admin Logic - Strict Password Check
     if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
       if (password !== 'admin123') {
         setError('Invalid admin password. (Hint: Use "admin123")');
         return;
       }
+    } 
+    // Guest Logic - Flexible Password for Mock App
+    // We accept any password >= 6 chars to allow users who just registered 
+    // with their own password to log in "successfully".
+    else if (role === 'GUEST') {
+      if (password.length < 6) {
+        setError('Password must be at least 6 characters.');
+        return;
+      }
     }
 
     login(email, role);
-    navigate(role === 'ADMIN' || role === 'SUPER_ADMIN' ? '/admin' : '/');
+    
+    // Smart Redirect:
+    // 1. If user was redirected here (e.g. from /book), send them back there.
+    // 2. If Admin, send to Dashboard.
+    // 3. Otherwise, send to Home.
+    const from = location.state?.from?.pathname + (location.state?.from?.search || '') || 
+                 (role === 'ADMIN' || role === 'SUPER_ADMIN' ? '/admin' : '/');
+    
+    navigate(from, { replace: true });
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md w-full">
+      <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md w-full animate-fade-in border border-gray-100">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Welcome Back</h1>
           <p className="text-gray-500 mt-2">Sign in to your account</p>
@@ -53,22 +71,20 @@ export const Login: React.FC = () => {
             </div>
           </div>
 
-          {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3.5 text-gray-400" size={18} />
-                <input
-                  type="password"
-                  required
-                  className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-3.5 text-gray-400" size={18} />
+              <input
+                type="password"
+                required
+                className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </div>
-          )}
+          </div>
 
           <div>
              <label className="block text-sm font-medium text-gray-700 mb-2">I am a...</label>
@@ -119,11 +135,19 @@ export const Login: React.FC = () => {
             Sign In
           </Button>
 
-          <p className="text-xs text-center text-gray-400 mt-4">
-            {(role === 'ADMIN' || role === 'SUPER_ADMIN') 
-              ? "Hint: The mock password is 'admin123'" 
-              : "Guests can login with email only."}
-          </p>
+          <div className="text-center mt-4">
+             <p className="text-sm text-gray-600 mb-2">
+               Don't have an account?{' '}
+               <Link to="/register" className="text-blue-600 font-medium hover:underline">
+                 Sign up
+               </Link>
+             </p>
+             {(role === 'ADMIN' || role === 'SUPER_ADMIN') && (
+               <p className="text-xs text-gray-400 mt-2">
+                 Hint: The mock admin password is 'admin123'
+               </p>
+             )}
+          </div>
         </form>
       </div>
     </div>
