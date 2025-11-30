@@ -1,15 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { getRooms, saveRoom, deleteRoom, getFacilities } from '../../services/mockDb';
-import { RoomType, Facility } from '../../types';
+import { getRooms, saveRoom, deleteRoom, getFacilities, getBookings } from '../../services/mockDb';
+import { RoomType, Facility, Booking } from '../../types';
 import { Button } from '../../components/Button';
-import { Plus, Trash2, Edit2, Users, DollarSign, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Edit2, Users, DollarSign, Loader2, Image as ImageIcon, Calendar as CalendarIcon, ChevronLeft, ChevronRight, X, Upload } from 'lucide-react';
 
 export const Rooms: React.FC = () => {
   const [rooms, setRooms] = useState<RoomType[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [currentRoom, setCurrentRoom] = useState<Partial<RoomType>>({});
   const [isLoading, setIsLoading] = useState(true);
+
+  // Calendar State
+  const [calendarRoom, setCalendarRoom] = useState<RoomType | null>(null);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
   useEffect(() => {
     loadData();
@@ -17,9 +22,17 @@ export const Rooms: React.FC = () => {
 
   const loadData = async () => {
     setIsLoading(true);
-    setRooms(await getRooms());
-    setFacilities(await getFacilities());
+    const [r, f, b] = await Promise.all([getRooms(), getFacilities(), getBookings()]);
+    setRooms(r);
+    setFacilities(f);
+    setBookings(b);
     setIsLoading(false);
+  };
+
+  const handleEdit = (room: RoomType) => {
+    setCurrentRoom(room);
+    setIsEditing(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -27,6 +40,7 @@ export const Rooms: React.FC = () => {
     if (currentRoom.name && currentRoom.pricePerNight) {
       await saveRoom({
         ...currentRoom,
+        // Use provided image or fallback to picsum placeholder
         imageUrl: currentRoom.imageUrl || `https://picsum.photos/800/600?random=${Math.random()}`
       } as RoomType);
       setIsEditing(false);
@@ -35,10 +49,46 @@ export const Rooms: React.FC = () => {
     }
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCurrentRoom({ ...currentRoom, imageUrl: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const toggleFacility = (id: string) => {
     const current = currentRoom.facilityIds || [];
     const updated = current.includes(id) ? current.filter(x => x !== id) : [...current, id];
     setCurrentRoom({ ...currentRoom, facilityIds: updated });
+  };
+
+  // Calendar Helpers
+  const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+  const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
+
+  const changeMonth = (offset: number) => {
+    const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + offset, 1);
+    setCurrentMonth(newDate);
+  };
+
+  const isDateBooked = (day: number) => {
+    if (!calendarRoom) return false;
+    
+    // Construct date string YYYY-MM-DD (local time approximation for mock)
+    const year = currentMonth.getFullYear();
+    const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(day).padStart(2, '0');
+    const checkDate = `${year}-${month}-${dayStr}`;
+
+    return bookings.some(b => 
+      b.roomId === calendarRoom.id && 
+      ['CONFIRMED', 'PENDING'].includes(b.status) &&
+      checkDate >= b.checkIn && checkDate < b.checkOut
+    );
   };
 
   if (isLoading) {
@@ -51,7 +101,7 @@ export const Rooms: React.FC = () => {
   }
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in relative">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800">Room Management</h2>
         <Button onClick={() => { setCurrentRoom({ facilityIds: [] }); setIsEditing(true); }}>
@@ -83,6 +133,56 @@ export const Rooms: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium mb-1">Total Stock</label>
                 <input type="number" className="w-full border rounded p-2" value={currentRoom.totalStock || ''} onChange={e => setCurrentRoom({...currentRoom, totalStock: Number(e.target.value)})} required />
+              </div>
+              
+              {/* Image Input Section */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Room Image</label>
+                <div className="space-y-3">
+                  {/* URL Input */}
+                  <div className="relative">
+                    <ImageIcon className="absolute left-3 top-2.5 text-gray-400" size={16} />
+                    <input 
+                      type="text" 
+                      className="w-full border rounded p-2 pl-9 text-sm" 
+                      placeholder="Paste image URL..."
+                      value={currentRoom.imageUrl || ''} 
+                      onChange={e => setCurrentRoom({...currentRoom, imageUrl: e.target.value})} 
+                    />
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <div className="h-px bg-gray-200 flex-1"></div>
+                    <span className="text-xs text-gray-400 font-bold uppercase">OR</span>
+                    <div className="h-px bg-gray-200 flex-1"></div>
+                  </div>
+
+                  {/* File Upload */}
+                  <label className="flex items-center justify-center gap-2 cursor-pointer bg-gray-50 border border-gray-300 border-dashed rounded-lg p-2 hover:bg-gray-100 transition-colors">
+                    <Upload size={16} className="text-gray-500" />
+                    <span className="text-sm text-gray-600">Upload Image</span>
+                    <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                  </label>
+
+                  {/* Preview */}
+                  {currentRoom.imageUrl ? (
+                    <div className="relative w-full h-24 rounded-lg overflow-hidden border border-gray-200 group">
+                      <img src={currentRoom.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                      <button 
+                        type="button"
+                        onClick={() => setCurrentRoom({...currentRoom, imageUrl: ''})}
+                        className="absolute top-1 right-1 bg-white/90 p-1 rounded-full text-red-600 hover:bg-white shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Remove Image"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 italic text-center">
+                      * A placeholder image will be used if left empty.
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
             
@@ -120,7 +220,7 @@ export const Rooms: React.FC = () => {
             <div className="h-48 overflow-hidden relative group">
               <img src={room.imageUrl} alt={room.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
               <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                 <button onClick={() => { setCurrentRoom(room); setIsEditing(true); }} className="p-2 bg-white/90 rounded-full hover:text-blue-600 shadow-sm"><Edit2 size={16} /></button>
+                 <button onClick={() => handleEdit(room)} className="p-2 bg-white/90 rounded-full hover:text-blue-600 shadow-sm"><Edit2 size={16} /></button>
                  <button onClick={async () => { if(window.confirm('Delete?')) { await deleteRoom(room.id); loadData(); }}} className="p-2 bg-white/90 rounded-full hover:text-red-600 shadow-sm"><Trash2 size={16} /></button>
               </div>
             </div>
@@ -136,16 +236,107 @@ export const Rooms: React.FC = () => {
                 <span className="flex items-center gap-1"><DollarSign size={16} /> {room.totalStock} Available</span>
               </div>
 
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1 mb-4">
                 {room.facilityIds.map(fid => {
                    const fac = facilities.find(f => f.id === fid);
                    return fac ? <span key={fid} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">{fac.name}</span> : null;
                 })}
               </div>
+
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full mt-auto flex items-center justify-center gap-2 border-blue-200 text-blue-600 hover:bg-blue-50"
+                onClick={() => setCalendarRoom(room)}
+              >
+                <CalendarIcon size={16} /> View Availability
+              </Button>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Availability Calendar Modal */}
+      {calendarRoom && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <div>
+                <h3 className="font-bold text-lg text-gray-900">Availability Check</h3>
+                <p className="text-sm text-gray-500">{calendarRoom.name}</p>
+              </div>
+              <button onClick={() => setCalendarRoom(null)} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <ChevronLeft size={20} className="text-gray-600" />
+                </button>
+                <h4 className="font-bold text-lg text-gray-800">
+                  {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </h4>
+                <button onClick={() => changeMonth(1)} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <ChevronRight size={20} className="text-gray-600" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-7 gap-1 mb-2 text-center">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                  <div key={d} className="text-xs font-bold text-gray-400 uppercase">{d}</div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7 gap-2">
+                {/* Empty cells for padding */}
+                {Array.from({ length: getFirstDayOfMonth(currentMonth.getFullYear(), currentMonth.getMonth()) }).map((_, i) => (
+                  <div key={`empty-${i}`} />
+                ))}
+
+                {/* Days */}
+                {Array.from({ length: getDaysInMonth(currentMonth.getFullYear(), currentMonth.getMonth()) }).map((_, i) => {
+                  const day = i + 1;
+                  const booked = isDateBooked(day);
+                  const isToday = 
+                    new Date().getDate() === day && 
+                    new Date().getMonth() === currentMonth.getMonth() && 
+                    new Date().getFullYear() === currentMonth.getFullYear();
+
+                  return (
+                    <div 
+                      key={day} 
+                      className={`
+                        aspect-square rounded-lg flex items-center justify-center text-sm font-medium transition-all relative
+                        ${booked 
+                          ? 'bg-red-50 text-red-600 border border-red-100' 
+                          : 'bg-green-50 text-green-700 border border-green-100 hover:bg-green-100'
+                        }
+                        ${isToday ? 'ring-2 ring-blue-500 ring-offset-1' : ''}
+                      `}
+                      title={booked ? 'Occupied' : 'Available'}
+                    >
+                      {day}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex gap-4 mt-6 text-sm justify-center">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-green-100 border border-green-200"></div>
+                  <span className="text-gray-600">Available</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-100 border border-red-200"></div>
+                  <span className="text-gray-600">Booked</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

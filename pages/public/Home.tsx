@@ -29,6 +29,7 @@ export const Home: React.FC = () => {
   const [availableRoomIds, setAvailableRoomIds] = useState<string[] | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
+  const [scrollY, setScrollY] = useState(0);
 
   useEffect(() => {
     const init = async () => {
@@ -39,9 +40,17 @@ export const Home: React.FC = () => {
 
     const timer = setInterval(() => {
       setCurrentHeroIndex((prev) => (prev + 1) % HERO_IMAGES.length);
-    }, 6000); // 6 seconds per slide
+    }, 8000); // Slower interval for relaxed luxurious feel
 
-    return () => clearInterval(timer);
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   const handleSearch = async () => {
@@ -74,39 +83,53 @@ export const Home: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
-      {/* Hero Section with Moving Slider (Ken Burns Effect) */}
-      <div className="relative h-[85vh] bg-slate-900 text-white overflow-hidden">
-        {HERO_IMAGES.map((img, index) => (
-          <div
-            key={index}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-              index === currentHeroIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'
-            }`}
-          >
-             <img 
-               src={img} 
-               className={`w-full h-full object-cover transition-transform duration-[6000ms] ease-out ${
-                 index === currentHeroIndex ? 'scale-110' : 'scale-100'
-               }`} 
-               alt={`Luxury Hotel View ${index + 1}`} 
-             />
-             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/30"></div>
-          </div>
-        ))}
+      
+      {/* Hero Section Container (Height Placeholder) */}
+      <div className="relative h-[85vh] w-full overflow-hidden">
+        
+        {/* Fixed Parallax Background Layer */}
+        {/* This creates the depth effect as content scrolls over it */}
+        <div className="fixed top-0 left-0 w-full h-[85vh] z-0 pointer-events-none">
+          {HERO_IMAGES.map((img, index) => (
+            <div
+              key={index}
+              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                index === currentHeroIndex ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+               <img 
+                 src={img} 
+                 className={`w-full h-full object-cover transition-transform duration-[8000ms] ease-out ${
+                   index === currentHeroIndex ? 'scale-110' : 'scale-100'
+                 }`} 
+                 alt={`Luxury Hotel View ${index + 1}`} 
+               />
+               <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/30 to-slate-900/40"></div>
+            </div>
+          ))}
+        </div>
 
-        <div className="relative h-full max-w-7xl mx-auto px-6 flex flex-col justify-center items-center text-center z-20 pt-20">
+        {/* Hero Content Layer (Parallax Text) */}
+        {/* Translates slower than scroll to create depth */}
+        <div 
+           className="relative z-10 h-full flex flex-col justify-center items-center text-center px-6 pt-20"
+           style={{ 
+             transform: `translateY(${scrollY * 0.4}px)`, 
+             opacity: Math.max(0, 1 - scrollY / 600) 
+           }}
+        >
           <div className="animate-fade-in-up">
-            <h5 className="text-blue-300 font-semibold tracking-[0.2em] uppercase mb-4 text-sm md:text-base">Welcome to HotelEase</h5>
-            <h1 className="text-5xl md:text-7xl font-bold mb-8 tracking-tight font-serif leading-tight drop-shadow-xl">
-              Redefining <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-100 to-white">Luxury Living</span>
+            <h5 className="text-blue-200 font-semibold tracking-[0.3em] uppercase mb-6 text-sm md:text-base border-b border-blue-200/30 inline-block pb-2">Welcome to Mero-Booking</h5>
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-8 tracking-tight font-serif leading-tight drop-shadow-2xl text-white">
+              Redefining <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-100 via-white to-blue-100">Luxury Living</span>
             </h1>
-            <p className="text-xl text-gray-200 mb-12 max-w-2xl mx-auto font-light leading-relaxed drop-shadow-md">
+            <p className="text-xl text-gray-200 mb-12 max-w-2xl mx-auto font-light leading-relaxed drop-shadow-lg">
               Escape to a world of unparalleled comfort and elegance. Your sanctuary of sophistication awaits.
             </p>
           </div>
           
           {/* Search Box */}
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-xl shadow-2xl max-w-5xl w-full flex flex-col lg:flex-row gap-6 items-end text-left mt-8 ring-1 ring-white/10">
+          <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-6 rounded-2xl shadow-2xl max-w-5xl w-full flex flex-col lg:flex-row gap-6 items-end text-left mt-8 ring-1 ring-white/20 hover:bg-white/15 transition-colors">
              <div className="flex-1 w-full">
                <label className="block text-xs font-bold text-blue-100 uppercase tracking-wider mb-2">Check In</label>
                <div className="relative group">
@@ -135,7 +158,7 @@ export const Home: React.FC = () => {
              <button 
                 onClick={handleSearch} 
                 disabled={isSearching}
-                className="w-full lg:w-auto h-[50px] px-8 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-lg hover:shadow-blue-600/30 transition-all transform hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full lg:w-auto h-[50px] px-8 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-lg hover:shadow-blue-600/40 transition-all transform hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
              >
                {isSearching && <Loader2 className="animate-spin" size={20} />}
                {isSearching ? 'Checking...' : 'Check Availability'}
@@ -144,111 +167,125 @@ export const Home: React.FC = () => {
         </div>
 
         {/* Slider Indicators */}
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-3 z-20">
+        <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex gap-4 z-20">
           {HERO_IMAGES.map((_, idx) => (
             <button
               key={idx}
               onClick={() => setCurrentHeroIndex(idx)}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                idx === currentHeroIndex ? 'bg-white w-8' : 'bg-white/40 hover:bg-white/60'
+              className={`h-1.5 rounded-full transition-all duration-500 ${
+                idx === currentHeroIndex ? 'bg-white w-12 shadow-[0_0_10px_rgba(255,255,255,0.8)]' : 'bg-white/30 w-3 hover:bg-white/50'
               }`}
             />
           ))}
         </div>
       </div>
 
-      {/* Facilities Strip */}
-      <div className="bg-gray-50 py-16">
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 text-center">
-           {facilities.slice(0, 6).map(f => {
-             // Simple dynamic icon selection for demo
-             let Icon = Star;
-             if (f.name.includes('Wifi')) Icon = Wifi;
-             if (f.name.includes('Car')) Icon = Car;
-             if (f.name.includes('Coffee') || f.name.includes('Breakfast')) Icon = Coffee;
-             if (f.name.includes('Pool')) Icon = Waves;
-             
-             return (
-               <div key={f.id} className="flex flex-col items-center gap-4 group cursor-pointer">
-                 {/* Glassy iOS Icon Container */}
-                 <div className="relative w-20 h-20 rounded-3xl flex items-center justify-center transition-all duration-300 transform group-hover:-translate-y-2 group-hover:shadow-[0_20px_40px_-15px_rgba(37,99,235,0.3)] bg-white shadow-lg border border-white/50">
-                    <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/80 to-blue-50/50 backdrop-blur-xl"></div>
-                    <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-transparent to-blue-100/30 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <Icon size={32} className="relative z-10 text-gray-500 group-hover:text-blue-600 transition-colors duration-300" strokeWidth={1.5} />
-                 </div>
-                 <span className="text-sm font-semibold tracking-wide text-gray-600 group-hover:text-gray-900 transition-colors">{f.name}</span>
-               </div>
-             );
-           })}
-        </div>
-      </div>
-
-      {/* Room Listing */}
-      <div className="max-w-7xl mx-auto px-6 py-24">
-        <div className="text-center mb-16">
-           <h2 className="text-4xl font-serif font-bold text-gray-900 mb-4">
-            {availableRoomIds ? 'Available Residences' : 'Accommodations'}
-           </h2>
-           <div className="w-24 h-1 bg-blue-600 mx-auto rounded-full"></div>
-        </div>
+      {/* Main Page Content */}
+      {/* z-20 and background color ensures this slides OVER the fixed hero images */}
+      <div className="relative z-20 bg-gray-50 shadow-[0_-30px_60px_-15px_rgba(0,0,0,0.3)] border-t border-white/50">
         
-        {displayedRooms.length === 0 ? (
-          <div className="text-center py-24 bg-white rounded-2xl border border-gray-100 shadow-sm">
-            <h3 className="text-2xl font-light text-gray-600">No residences available for these dates.</h3>
-            <p className="text-gray-400 mt-2">We apologize for the inconvenience. Please select alternative dates.</p>
+        {/* Facilities Strip */}
+        <div className="bg-white/80 backdrop-blur-sm py-16 border-b border-gray-100">
+          <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 text-center">
+             {facilities.slice(0, 6).map(f => {
+               // Simple dynamic icon selection for demo
+               let Icon = Star;
+               if (f.name.includes('Wifi')) Icon = Wifi;
+               if (f.name.includes('Car')) Icon = Car;
+               if (f.name.includes('Coffee') || f.name.includes('Breakfast')) Icon = Coffee;
+               if (f.name.includes('Pool')) Icon = Waves;
+               
+               return (
+                 <div key={f.id} className="flex flex-col items-center gap-4 group cursor-pointer">
+                   {/* Glassy iOS Icon Container */}
+                   <div className="relative w-20 h-20 rounded-[24px] flex items-center justify-center transition-all duration-300 transform group-hover:-translate-y-2 group-hover:shadow-[0_20px_40px_-15px_rgba(37,99,235,0.3)] bg-gradient-to-br from-white to-gray-50 shadow-xl shadow-gray-200/50 border border-white">
+                      <div className="absolute inset-0 rounded-[24px] bg-gradient-to-br from-blue-50/0 to-blue-50/80 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      <Icon size={32} className="relative z-10 text-gray-400 group-hover:text-blue-600 transition-colors duration-300" strokeWidth={1.5} />
+                   </div>
+                   <span className="text-sm font-semibold tracking-wide text-gray-500 group-hover:text-gray-900 transition-colors">{f.name}</span>
+                 </div>
+               );
+             })}
           </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-            {displayedRooms.map(room => (
-              <div key={room.id} className="group bg-white rounded-3xl shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden border border-gray-100 flex flex-col h-full">
-                <div className="h-80 relative overflow-hidden">
-                  <img 
-                    src={room.imageUrl} 
-                    alt={room.name} 
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                  />
-                  <div className="absolute top-4 right-4 bg-white/80 backdrop-blur-md border border-white/50 px-4 py-2 rounded-2xl text-blue-900 font-bold shadow-lg text-sm">
-                    NPR {room.pricePerNight.toLocaleString()} <span className="text-gray-500 font-normal">/ night</span>
-                  </div>
-                </div>
-                <div className="p-8 flex-1 flex flex-col">
-                  <div className="flex justify-between items-start mb-4">
-                     <div>
-                       <h3 className="text-2xl font-bold font-serif text-gray-900 mb-1 group-hover:text-blue-700 transition-colors">{room.name}</h3>
-                       <div className="flex items-center gap-4 text-gray-500 text-sm mt-2">
-                         <span className="flex items-center gap-1.5"><Users size={16} className="text-blue-500"/> {room.capacity} Guests</span>
-                         <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                         <span className="flex items-center gap-1.5"><Star size={16} className="text-yellow-400 fill-current"/> 5.0 Rating</span>
-                       </div>
-                     </div>
-                  </div>
-                  
-                  <p className="text-gray-600 leading-relaxed mb-6 flex-1 border-t border-dashed border-gray-100 pt-4 mt-2">
-                    {room.description}
-                  </p>
-                  
-                  <div className="flex flex-wrap gap-2 mb-8">
-                     {room.facilityIds.slice(0, 4).map(fid => {
-                        const f = facilities.find(fac => fac.id === fid);
-                        return f ? (
-                          <span key={fid} className="text-xs px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-full text-gray-600 font-medium">
-                            {f.name}
-                          </span>
-                        ) : null;
-                     })}
-                  </div>
+        </div>
 
-                  <Button 
-                    onClick={() => handleBook(room)} 
-                    className="w-full py-4 text-base tracking-wide uppercase font-semibold bg-gray-900 hover:bg-blue-700 transition-colors rounded-xl flex items-center justify-center gap-2"
-                  >
-                    Reserve Now
-                  </Button>
-                </div>
-              </div>
-            ))}
+        {/* Room Listing */}
+        <div className="max-w-7xl mx-auto px-6 py-24">
+          <div className="text-center mb-16">
+             <h2 className="text-4xl font-serif font-bold text-gray-900 mb-4">
+              {availableRoomIds ? 'Available Residences' : 'Accommodations'}
+             </h2>
+             <div className="w-24 h-1 bg-blue-600 mx-auto rounded-full opacity-80"></div>
           </div>
-        )}
+          
+          {displayedRooms.length === 0 ? (
+            <div className="text-center py-24 bg-white rounded-3xl border border-gray-100 shadow-sm">
+              <h3 className="text-2xl font-light text-gray-600">No residences available for these dates.</h3>
+              <p className="text-gray-400 mt-2">We apologize for the inconvenience. Please select alternative dates.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+              {displayedRooms.map(room => (
+                <div key={room.id} className="group bg-white rounded-[32px] shadow-sm hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100 flex flex-col h-full hover:-translate-y-1">
+                  <div className="h-80 relative overflow-hidden">
+                    <img 
+                      src={room.imageUrl} 
+                      alt={room.name} 
+                      className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60"></div>
+                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md border border-white/50 px-5 py-2.5 rounded-2xl text-blue-900 font-bold shadow-lg text-sm">
+                      NPR {room.pricePerNight.toLocaleString()} <span className="text-gray-500 font-normal">/ night</span>
+                    </div>
+                  </div>
+                  <div className="p-8 flex-1 flex flex-col">
+                    <div className="flex justify-between items-start mb-4">
+                       <div>
+                         <h3 className="text-2xl font-bold font-serif text-gray-900 mb-1 group-hover:text-blue-700 transition-colors">{room.name}</h3>
+                         <div className="flex items-center gap-4 text-gray-500 text-sm mt-2">
+                           <span className="flex items-center gap-1.5"><Users size={16} className="text-blue-500"/> {room.capacity} Guests</span>
+                           <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                           <span className="flex items-center gap-1.5"><Star size={16} className="text-yellow-400 fill-current"/> 5.0 Rating</span>
+                         </div>
+                       </div>
+                    </div>
+                    
+                    <p className="text-gray-600 leading-relaxed mb-6 flex-1 border-t border-dashed border-gray-100 pt-4 mt-2">
+                      {room.description}
+                    </p>
+                    
+                    <div className="flex flex-wrap gap-2 mb-8">
+                       {room.facilityIds.slice(0, 4).map(fid => {
+                          const f = facilities.find(fac => fac.id === fid);
+                          return f ? (
+                            <span key={fid} className="text-xs px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-full text-gray-600 font-medium">
+                              {f.name}
+                            </span>
+                          ) : null;
+                       })}
+                    </div>
+
+                    <div className="flex flex-col gap-3 mt-auto">
+                      <Button 
+                        onClick={() => navigate(`/book?roomId=${room.id}&checkIn=${dates.checkIn}&checkOut=${dates.checkOut}`)} 
+                        variant="secondary"
+                        className="w-full py-4 text-sm tracking-wide font-semibold bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors rounded-xl flex items-center justify-center gap-2"
+                      >
+                        Book This Room
+                      </Button>
+                      <Button 
+                        onClick={() => handleBook(room)} 
+                        className="w-full py-4 text-sm tracking-wide uppercase font-semibold bg-gray-900 hover:bg-blue-700 transition-colors rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-gray-200"
+                      >
+                        Reserve Now
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

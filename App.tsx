@@ -13,6 +13,7 @@ import { Bookings } from './pages/admin/Bookings';
 import { MyBookings } from './pages/guest/MyBookings';
 import { ConciergeChat } from './components/ConciergeChat';
 import { UserRole } from './types';
+import { Crown } from 'lucide-react';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode, requiredRole?: UserRole }> = ({ children, requiredRole }) => {
   const { user, isLoading } = useAuth();
@@ -37,9 +38,18 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode, requiredRole?: UserR
 
 const LayoutWithChat: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <>
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-40">
+    <nav className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm backdrop-blur-md bg-white/90">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Link to="/" className="text-xl font-bold tracking-tight text-blue-900">HotelEase</Link>
+        <Link to="/" className="flex items-center gap-3 group">
+          {/* Luxurious MB Logo */}
+          <div className="relative w-10 h-10 bg-gradient-to-br from-amber-400 via-orange-500 to-amber-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-amber-500/30 transform group-hover:scale-105 transition-transform duration-300 border border-amber-300">
+             <div className="absolute -top-1 -right-1">
+                <Crown size={14} className="text-yellow-200 drop-shadow-sm fill-yellow-400" />
+             </div>
+             <span className="font-serif font-black text-lg tracking-tighter leading-none mt-0.5 drop-shadow-md">MB</span>
+          </div>
+          <span className="text-xl font-bold tracking-tight text-slate-900 font-serif">Mero-Booking</span>
+        </Link>
         <div className="flex items-center gap-4">
            <PublicNav />
         </div>
@@ -55,13 +65,13 @@ const PublicNav = () => {
     if (user) {
         return (
             <>
-             <span className="text-sm text-gray-600 hidden md:block">Hi, {user.name}</span>
+             <span className="text-sm text-gray-600 hidden md:block font-medium">Namaste, {user.name}</span>
              {(user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') && (
-               <Link to="/admin" className="text-sm font-medium text-blue-600 hover:underline">Admin Panel</Link>
+               <Link to="/admin" className="text-sm font-medium text-amber-600 hover:text-amber-700 hover:underline">Admin Panel</Link>
              )}
              {/* Show My Bookings for everyone so Admins can test the flow too */}
-             <Link to="/my-bookings" className="text-sm font-medium text-blue-600 hover:underline">My Bookings</Link>
-             <button onClick={logout} className="text-sm font-medium text-gray-600 hover:text-gray-900">Logout</button>
+             <Link to="/my-bookings" className="text-sm font-medium text-slate-600 hover:text-amber-600 transition-colors">My Bookings</Link>
+             <button onClick={logout} className="text-sm font-medium text-gray-500 hover:text-gray-900">Logout</button>
             </>
         )
     }
@@ -69,13 +79,13 @@ const PublicNav = () => {
       <div className="flex gap-3">
         <Link 
           to="/login" 
-          className="text-sm font-medium text-gray-600 hover:text-blue-600 px-3 py-2 transition-colors"
+          className="text-sm font-medium text-gray-600 hover:text-amber-600 px-3 py-2 transition-colors"
         >
           Login
         </Link>
         <Link 
           to="/register" 
-          className="text-sm font-medium bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          className="text-sm font-medium bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/20"
         >
           Sign Up
         </Link>

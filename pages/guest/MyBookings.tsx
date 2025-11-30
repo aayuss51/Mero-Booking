@@ -45,7 +45,7 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, rooms, onCancel, isH
   const isCancellable = ['PENDING', 'CONFIRMED'].includes(booking.status);
 
   return (
-    <div className={`bg-white rounded-2xl p-6 border transition-all flex flex-col md:flex-row gap-6 ${isHistory ? 'border-gray-100 bg-gray-50/50 opacity-90 hover:opacity-100' : 'border-gray-200 shadow-sm hover:shadow-md'}`}>
+    <div className={`bg-white rounded-2xl p-6 border transition-all flex flex-col md:flex-row gap-6 ${isHistory ? 'border-gray-200 opacity-90' : 'border-gray-200 shadow-sm hover:shadow-md'}`}>
       {/* Room Image */}
       <div className={`w-full md:w-56 h-40 rounded-xl overflow-hidden bg-gray-200 shrink-0 relative group ${isHistory ? 'grayscale filter contrast-75' : ''}`}>
         {room ? (
@@ -86,19 +86,19 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, rooms, onCancel, isH
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-          <div className={`p-3 rounded-xl border ${isHistory ? 'bg-transparent border-gray-200' : 'bg-gray-50/50 border-gray-100'}`}>
+          <div className={`p-3 rounded-xl border ${isHistory ? 'bg-white border-gray-200' : 'bg-gray-50/50 border-gray-100'}`}>
             <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Check In</p>
             <p className={`font-semibold mt-1 ${isHistory ? 'text-gray-500' : 'text-gray-900'}`}>{booking.checkIn}</p>
           </div>
-          <div className={`p-3 rounded-xl border ${isHistory ? 'bg-transparent border-gray-200' : 'bg-gray-50/50 border-gray-100'}`}>
+          <div className={`p-3 rounded-xl border ${isHistory ? 'bg-white border-gray-200' : 'bg-gray-50/50 border-gray-100'}`}>
             <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Check Out</p>
             <p className={`font-semibold mt-1 ${isHistory ? 'text-gray-500' : 'text-gray-900'}`}>{booking.checkOut}</p>
           </div>
-          <div className={`p-3 rounded-xl border ${isHistory ? 'bg-transparent border-gray-200' : 'bg-gray-50/50 border-gray-100'}`}>
+          <div className={`p-3 rounded-xl border ${isHistory ? 'bg-white border-gray-200' : 'bg-gray-50/50 border-gray-100'}`}>
             <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Total Price</p>
             <p className={`font-bold mt-1 ${isHistory ? 'text-gray-500' : 'text-blue-600'}`}>NPR {booking.totalPrice.toLocaleString()}</p>
           </div>
-          <div className={`p-3 rounded-xl border ${isHistory ? 'bg-transparent border-gray-200' : 'bg-gray-50/50 border-gray-100'}`}>
+          <div className={`p-3 rounded-xl border ${isHistory ? 'bg-white border-gray-200' : 'bg-gray-50/50 border-gray-100'}`}>
             <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Guest</p>
             <p className={`font-semibold mt-1 truncate ${isHistory ? 'text-gray-500' : 'text-gray-900'}`} title={booking.guestName}>{booking.guestName}</p>
           </div>
@@ -196,7 +196,7 @@ export const MyBookings: React.FC = () => {
           </Link>
         </div>
       ) : (
-        <div className="space-y-16">
+        <div className="space-y-12">
           {/* Active Section */}
           <section>
             <div className="flex items-center gap-3 mb-6">
@@ -214,25 +214,26 @@ export const MyBookings: React.FC = () => {
                 {activeBookings.map(b => <BookingCard key={b.id} booking={b} rooms={rooms} onCancel={handleCancel} />)}
               </div>
             ) : (
-              <div className="bg-white/50 border border-dashed border-gray-300 rounded-2xl p-12 text-center text-gray-400">
+              <div className="bg-white border border-dashed border-gray-300 rounded-2xl p-12 text-center text-gray-400">
                 <p>No active reservations at the moment.</p>
               </div>
             )}
           </section>
 
-          {/* History Section */}
+          {/* History Section - Visually Distinct */}
           {historyBookings.length > 0 && (
-            <section className="relative pt-10 border-t border-dashed border-gray-300">
-              <div className="flex items-center gap-3 mb-6 opacity-70">
-                <div className="p-2 bg-gray-200 text-gray-600 rounded-lg">
+            <div className="bg-gray-100 rounded-[32px] p-8 border border-gray-200/60 shadow-inner">
+              <div className="flex items-center gap-3 mb-8 opacity-70">
+                <div className="p-2 bg-gray-300 text-gray-600 rounded-lg">
                   <History size={20} />
                 </div>
                 <h2 className="text-xl font-bold text-gray-600">Booking History</h2>
-                  <span className="bg-gray-200 text-gray-600 text-xs font-bold px-2.5 py-1 rounded-full">
+                <span className="bg-gray-300 text-gray-600 text-xs font-bold px-2.5 py-1 rounded-full">
                   {historyBookings.length}
                 </span>
               </div>
-              <div className="grid gap-6 opacity-80 hover:opacity-100 transition-opacity">
+              
+              <div className="grid gap-6 opacity-85 hover:opacity-100 transition-opacity">
                 {historyBookings.map(b => (
                   <BookingCard 
                     key={b.id} 
@@ -243,7 +244,7 @@ export const MyBookings: React.FC = () => {
                   />
                 ))}
               </div>
-            </section>
+            </div>
           )}
         </div>
       )}
