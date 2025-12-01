@@ -118,10 +118,6 @@ export const Rooms: React.FC = () => {
                 <label className="block text-sm font-medium mb-1">Room Name</label>
                 <input type="text" className="w-full border rounded p-2" value={currentRoom.name || ''} onChange={e => setCurrentRoom({...currentRoom, name: e.target.value})} required />
               </div>
-               <div>
-                <label className="block text-sm font-medium mb-1">Description</label>
-                <input type="text" className="w-full border rounded p-2" value={currentRoom.description || ''} onChange={e => setCurrentRoom({...currentRoom, description: e.target.value})} required />
-              </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Price/Night (NPR)</label>
                 <input type="number" className="w-full border rounded p-2" value={currentRoom.pricePerNight || ''} onChange={e => setCurrentRoom({...currentRoom, pricePerNight: Number(e.target.value)})} required />
@@ -135,8 +131,21 @@ export const Rooms: React.FC = () => {
                 <input type="number" className="w-full border rounded p-2" value={currentRoom.totalStock || ''} onChange={e => setCurrentRoom({...currentRoom, totalStock: Number(e.target.value)})} required />
               </div>
               
+              {/* Description Field - Full Width */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea 
+                  className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" 
+                  rows={3}
+                  value={currentRoom.description || ''} 
+                  onChange={e => setCurrentRoom({...currentRoom, description: e.target.value})} 
+                  placeholder="Enter a detailed description of the room..."
+                  required 
+                />
+              </div>
+              
               {/* Image Input Section */}
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-sm font-medium mb-1">Room Image</label>
                 <div className="space-y-3">
                   {/* URL Input */}
@@ -166,15 +175,15 @@ export const Rooms: React.FC = () => {
 
                   {/* Preview */}
                   {currentRoom.imageUrl ? (
-                    <div className="relative w-full h-24 rounded-lg overflow-hidden border border-gray-200 group">
+                    <div className="relative w-full h-48 rounded-lg overflow-hidden border border-gray-200 group">
                       <img src={currentRoom.imageUrl} alt="Preview" className="w-full h-full object-cover" />
                       <button 
                         type="button"
                         onClick={() => setCurrentRoom({...currentRoom, imageUrl: ''})}
-                        className="absolute top-1 right-1 bg-white/90 p-1 rounded-full text-red-600 hover:bg-white shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-2 right-2 bg-white/90 p-1.5 rounded-full text-red-600 hover:bg-white shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
                         title="Remove Image"
                       >
-                        <X size={14} />
+                        <X size={16} />
                       </button>
                     </div>
                   ) : (
@@ -229,7 +238,7 @@ export const Rooms: React.FC = () => {
                 <h3 className="font-bold text-lg">{room.name}</h3>
                 <span className="font-semibold text-blue-600">NPR {room.pricePerNight.toLocaleString()}</span>
               </div>
-              <p className="text-gray-500 text-sm mb-4 flex-1">{room.description}</p>
+              <p className="text-gray-500 text-sm mb-4 flex-1 line-clamp-3">{room.description}</p>
               
               <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
                 <span className="flex items-center gap-1"><Users size={16} /> {room.capacity} Guests</span>
