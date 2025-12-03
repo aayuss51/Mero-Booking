@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getUserBookings, getRooms, updateBookingStatus } from '../../services/mockDb';
 import { Booking, RoomType } from '../../types';
-import { Calendar, BedDouble, CheckCircle, Clock, XCircle, RefreshCw, CheckCheck, History, AlertTriangle } from 'lucide-react';
+import { Calendar, BedDouble, CheckCircle, Clock, XCircle, RefreshCw, CheckCheck, History, AlertTriangle, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/Button';
 
@@ -38,16 +38,17 @@ interface BookingCardProps {
   rooms: RoomType[];
   onCancel: (id: string) => void;
   isHistory?: boolean;
+  isCancelling?: boolean;
 }
 
-const BookingCard: React.FC<BookingCardProps> = ({ booking, rooms, onCancel, isHistory = false }) => {
+const BookingCard: React.FC<BookingCardProps> = ({ booking, rooms, onCancel, isHistory = false, isCancelling = false }) => {
   const room = rooms.find(r => r.id === booking.roomId);
   const isCancellable = ['PENDING', 'CONFIRMED'].includes(booking.status);
 
   return (
-    <div className={`bg-white rounded-2xl p-6 border transition-all flex flex-col md:flex-row gap-6 ${isHistory ? 'border-gray-200 bg-gray-50/50' : 'border-gray-200 shadow-sm hover:shadow-md'}`}>
+    <div className={`rounded-2xl p-6 border transition-all flex flex-col md:flex-row gap-6 ${isHistory ? 'bg-white/60 border-gray-200 opacity-90' : 'bg-white border-gray-200 shadow-sm hover:shadow-md'}`}>
       {/* Room Image */}
-      <div className={`w-full md:w-56 h-40 rounded-xl overflow-hidden bg-gray-200 shrink-0 relative group ${isHistory ? 'grayscale opacity-80' : ''}`}>
+      <div className={`w-full md:w-56 h-40 rounded-xl overflow-hidden bg-gray-200 shrink-0 relative group ${isHistory ? 'grayscale opacity-75' : ''}`}>
         {room ? (
           <img src={room.imageUrl} alt={room.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
         ) : (
@@ -64,7 +65,7 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, rooms, onCancel, isH
       <div className="flex-1 flex flex-col justify-between">
         <div>
           <div className="flex justify-between items-start mb-2">
-            <h3 className={`text-xl font-bold ${isHistory ? 'text-gray-500' : 'text-gray-900'}`}>{room?.name || `Room #${booking.roomId}`}</h3>
+            <h3 className={`text-xl font-bold ${isHistory ? 'text-gray-600' : 'text-gray-900'}`}>{room?.name || `Room #${booking.roomId}`}</h3>
             <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-sm ${getStatusColor(booking.status)}`}>
               {getStatusIcon(booking.status)}
               {booking.status.charAt(0) + booking.status.slice(1).toLowerCase()}
@@ -86,19 +87,19 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, rooms, onCancel, isH
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-          <div className={`p-3 rounded-xl border ${isHistory ? 'bg-white border-gray-100' : 'bg-gray-50/50 border-gray-100'}`}>
+          <div className={`p-3 rounded-xl border ${isHistory ? 'bg-transparent border-gray-200' : 'bg-gray-50/50 border-gray-100'}`}>
             <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Check In</p>
             <p className={`font-semibold mt-1 ${isHistory ? 'text-gray-500' : 'text-gray-900'}`}>{booking.checkIn}</p>
           </div>
-          <div className={`p-3 rounded-xl border ${isHistory ? 'bg-white border-gray-100' : 'bg-gray-50/50 border-gray-100'}`}>
+          <div className={`p-3 rounded-xl border ${isHistory ? 'bg-transparent border-gray-200' : 'bg-gray-50/50 border-gray-100'}`}>
             <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Check Out</p>
             <p className={`font-semibold mt-1 ${isHistory ? 'text-gray-500' : 'text-gray-900'}`}>{booking.checkOut}</p>
           </div>
-          <div className={`p-3 rounded-xl border ${isHistory ? 'bg-white border-gray-100' : 'bg-gray-50/50 border-gray-100'}`}>
+          <div className={`p-3 rounded-xl border ${isHistory ? 'bg-transparent border-gray-200' : 'bg-gray-50/50 border-gray-100'}`}>
             <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Total Price</p>
             <p className={`font-bold mt-1 ${isHistory ? 'text-gray-500' : 'text-blue-600'}`}>NPR {booking.totalPrice.toLocaleString()}</p>
           </div>
-          <div className={`p-3 rounded-xl border ${isHistory ? 'bg-white border-gray-100' : 'bg-gray-50/50 border-gray-100'}`}>
+          <div className={`p-3 rounded-xl border ${isHistory ? 'bg-transparent border-gray-200' : 'bg-gray-50/50 border-gray-100'}`}>
             <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Guest</p>
             <p className={`font-semibold mt-1 truncate ${isHistory ? 'text-gray-500' : 'text-gray-900'}`} title={booking.guestName}>{booking.guestName}</p>
           </div>
@@ -111,9 +112,18 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, rooms, onCancel, isH
                   variant="danger" 
                   size="sm"
                   onClick={() => onCancel(booking.id)}
-                  className="rounded-lg shadow-sm border border-red-200 bg-red-50 text-red-700 hover:bg-red-600 hover:text-white transition-all duration-300"
+                  disabled={isCancelling}
+                  className="rounded-lg shadow-sm border border-red-200 bg-red-50 text-red-700 hover:bg-red-600 hover:text-white transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                  <AlertTriangle size={16} className="mr-2" /> Cancel Booking
+                  {isCancelling ? (
+                    <>
+                      <Loader2 size={16} className="mr-2 animate-spin" /> Cancelling...
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle size={16} className="mr-2" /> Cancel Booking
+                    </>
+                  )}
               </Button>
           </div>
         )}
@@ -127,30 +137,38 @@ export const MyBookings: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [rooms, setRooms] = useState<RoomType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (showGlobalLoading = true) => {
     if (user) {
-      setIsLoading(true);
+      if (showGlobalLoading) setIsLoading(true);
       const [userBookings, allRooms] = await Promise.all([
         getUserBookings(user.id),
         getRooms()
       ]);
+      // Sort by created date descending
       setBookings(userBookings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       setRooms(allRooms);
-      setIsLoading(false);
+      if (showGlobalLoading) setIsLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
   }, [fetchData]);
 
   const handleCancel = async (bookingId: string) => {
     if (window.confirm("Are you sure you want to cancel this reservation? This action cannot be undone.")) {
-      setIsLoading(true);
+      setCancellingId(bookingId);
       await updateBookingStatus(bookingId, 'CANCELLED');
-      await fetchData();
+      // Refresh data in background without triggering full page loader
+      await fetchData(false);
+      setCancellingId(null);
     }
+  };
+
+  const handleRefresh = () => {
+    fetchData(true);
   };
 
   if (isLoading) {
@@ -162,6 +180,7 @@ export const MyBookings: React.FC = () => {
     );
   }
 
+  // Filter Bookings
   const activeBookings = bookings.filter(b => ['PENDING', 'CONFIRMED'].includes(b.status));
   const historyBookings = bookings.filter(b => ['COMPLETED', 'CANCELLED', 'REJECTED'].includes(b.status));
 
@@ -173,7 +192,7 @@ export const MyBookings: React.FC = () => {
           <p className="text-gray-500 mt-2">Manage your upcoming and past stays.</p>
         </div>
         <div className="flex gap-3">
-            <Button variant="secondary" onClick={fetchData} className="gap-2 bg-white border border-gray-200 shadow-sm hover:bg-gray-50">
+            <Button variant="secondary" onClick={handleRefresh} className="gap-2 bg-white border border-gray-200 shadow-sm hover:bg-gray-50">
                 <RefreshCw size={16} /> Refresh
             </Button>
             <Link to="/">
@@ -197,21 +216,33 @@ export const MyBookings: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-12">
-          {/* Active Section */}
+          
+          {/* Section 1: Active Bookings */}
           <section>
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
                  <Calendar size={20} />
               </div>
               <h2 className="text-xl font-bold text-gray-800">Current & Upcoming</h2>
-              <span className="bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">
-                {activeBookings.length}
-              </span>
+              {activeBookings.length > 0 && (
+                <span className="bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">
+                  {activeBookings.length}
+                </span>
+              )}
             </div>
             
             {activeBookings.length > 0 ? (
               <div className="grid gap-6">
-                {activeBookings.map(b => <BookingCard key={b.id} booking={b} rooms={rooms} onCancel={handleCancel} />)}
+                {activeBookings.map(b => (
+                  <BookingCard 
+                    key={b.id} 
+                    booking={b} 
+                    rooms={rooms} 
+                    onCancel={handleCancel}
+                    isHistory={false}
+                    isCancelling={cancellingId === b.id}
+                  />
+                ))}
               </div>
             ) : (
               <div className="bg-white border border-dashed border-gray-300 rounded-2xl p-12 text-center text-gray-400">
@@ -220,32 +251,34 @@ export const MyBookings: React.FC = () => {
             )}
           </section>
 
-          {/* History Section - Visually Distinct */}
+          {/* Section 2: Booking History (Distinct Section) */}
           {historyBookings.length > 0 && (
-            <section className="bg-slate-50 rounded-[32px] p-8 border border-slate-200/60 shadow-inner mt-8">
-              <div className="flex items-center gap-3 mb-8 opacity-80">
-                <div className="p-2 bg-slate-200 text-slate-600 rounded-lg">
-                  <History size={20} />
+            <section className="mt-12 pt-8 border-t border-gray-200">
+              <div className="bg-gray-100 rounded-[32px] p-8 border border-gray-200 shadow-inner">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="p-2 bg-gray-200 text-gray-600 rounded-lg">
+                    <History size={20} />
+                  </div>
+                  <div className="flex flex-col">
+                      <h2 className="text-xl font-bold text-gray-700">Booking History</h2>
+                      <p className="text-sm text-gray-500">Archive of completed stays and cancellations.</p>
+                  </div>
+                  <span className="bg-gray-300 text-gray-700 text-xs font-bold px-2.5 py-1 rounded-full ml-auto">
+                    {historyBookings.length}
+                  </span>
                 </div>
-                <div className="flex flex-col">
-                    <h2 className="text-xl font-bold text-slate-700">Booking History</h2>
-                    <p className="text-sm text-slate-500">Past stays, cancellations, and rejected requests.</p>
+                
+                <div className="grid gap-6">
+                  {historyBookings.map(b => (
+                    <BookingCard 
+                      key={b.id} 
+                      booking={b} 
+                      rooms={rooms} 
+                      onCancel={handleCancel}
+                      isHistory={true} 
+                    />
+                  ))}
                 </div>
-                <span className="bg-slate-300 text-slate-700 text-xs font-bold px-2.5 py-1 rounded-full ml-auto">
-                  {historyBookings.length}
-                </span>
-              </div>
-              
-              <div className="grid gap-6 opacity-90">
-                {historyBookings.map(b => (
-                  <BookingCard 
-                    key={b.id} 
-                    booking={b} 
-                    rooms={rooms} 
-                    onCancel={handleCancel}
-                    isHistory={true} 
-                  />
-                ))}
               </div>
             </section>
           )}

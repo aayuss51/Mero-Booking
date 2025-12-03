@@ -55,7 +55,7 @@ const INITIAL_ROOMS: RoomType[] = [
 
 const INITIAL_BOOKINGS: Booking[] = [
   {
-    id: 'b1',
+    id: 'BK-7A9X2',
     roomId: '101',
     userId: 'u2',
     guestName: 'Alexander Hamilton',
@@ -145,9 +145,14 @@ export const getUserBookings = async (userId: string): Promise<Booking[]> => {
 export const createBooking = async (booking: Omit<Booking, 'id' | 'createdAt' | 'status'>): Promise<Booking> => {
   await delay(600); // Slightly longer for "processing" feel
   const current = await getBookings();
+  
+  // Generate a distinct Booking ID (e.g., BK-9X2A1)
+  const randomStr = Math.random().toString(36).substr(2, 5).toUpperCase();
+  const bookingId = `BK-${randomStr}`;
+
   const newBooking: Booking = {
     ...booking,
-    id: Math.random().toString(36).substr(2, 9),
+    id: bookingId,
     status: 'PENDING',
     createdAt: new Date().toISOString()
   };

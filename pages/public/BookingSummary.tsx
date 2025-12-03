@@ -38,8 +38,8 @@ export const BookingSummary: React.FC = () => {
     if (!confirmedBooking || !room) return;
 
     const shareData = {
-      title: 'Booking Confirmation - HotelEase',
-      text: `My stay at HotelEase is confirmed!\n\nBooking Reference: #${confirmedBooking.id}\nRoom: ${room.name}\nDates: ${confirmedBooking.checkIn} to ${confirmedBooking.checkOut}\nTotal: NPR ${confirmedBooking.totalPrice.toLocaleString()}`,
+      title: 'Booking Confirmation - Mero-Booking',
+      text: `My stay at Mero-Booking is confirmed!\n\nBooking Reference: #${confirmedBooking.id}\nRoom: ${room.name}\nDates: ${confirmedBooking.checkIn} to ${confirmedBooking.checkOut}\nTotal: NPR ${confirmedBooking.totalPrice.toLocaleString()}`,
       url: window.location.href
     };
 
@@ -47,7 +47,6 @@ export const BookingSummary: React.FC = () => {
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
-        // Fallback to clipboard
         await navigator.clipboard.writeText(shareData.text);
         alert('Booking details copied to clipboard!');
       }
@@ -72,9 +71,8 @@ export const BookingSummary: React.FC = () => {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" size={32} /></div>;
   }
 
-  // --- Success View ---
+  // --- Success View (Confirmation Modal/Page) ---
   if (confirmedBooking && room) {
-    // Recalculate for display on receipt
     const startDate = new Date(confirmedBooking.checkIn);
     const endDate = new Date(confirmedBooking.checkOut);
     const nights = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24));
@@ -83,7 +81,7 @@ export const BookingSummary: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 animate-fade-in print:bg-white print:p-0">
         <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-lg w-full text-center border border-gray-100 relative overflow-hidden print:shadow-none print:border-none print:w-full print:max-w-none">
-           {/* Decorative Background Element */}
+           {/* Decorative Status Bar */}
            <div className={`absolute top-0 left-0 w-full h-2 bg-gradient-to-r print:hidden ${isPending ? 'from-amber-400 to-amber-600' : 'from-green-400 to-green-600'}`}></div>
 
            <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border print:hidden ${isPending ? 'bg-amber-50 border-amber-100' : 'bg-green-50 border-green-100'}`}>
@@ -95,14 +93,14 @@ export const BookingSummary: React.FC = () => {
            </h1>
            <p className="text-gray-500 mb-8 print:hidden">
              {isPending 
-               ? 'Your reservation request has been successfully submitted.' 
+               ? 'Your reservation request has been received and is pending approval.' 
                : 'Thank you for choosing Mero-Booking. Your reservation is secured.'}
            </p>
 
-           {/* Highlighted Confirmation Number */}
+           {/* Unique Confirmation Number Section */}
            <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 mb-8 text-center shadow-sm relative overflow-hidden group">
              <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-             <p className="text-xs text-blue-600 font-bold uppercase tracking-wider mb-2">Confirmation Number</p>
+             <p className="text-xs text-blue-600 font-bold uppercase tracking-wider mb-2">Booking Confirmation ID</p>
              <div className="flex items-center justify-center gap-3 relative z-10">
                <p className="text-4xl font-mono font-bold text-blue-900 tracking-widest select-all">#{confirmedBooking.id}</p>
                <button 
@@ -118,6 +116,7 @@ export const BookingSummary: React.FC = () => {
              </div>
            </div>
            
+           {/* Detailed Booking Information */}
            <div className="bg-slate-50 rounded-2xl p-6 mb-8 text-left border border-slate-200 shadow-inner print:bg-white print:border-2 print:border-black">
              <div className="flex justify-between items-center border-b border-slate-200 pb-4 mb-4">
                <div>
@@ -186,7 +185,7 @@ export const BookingSummary: React.FC = () => {
     );
   }
 
-  // --- Summary View ---
+  // --- Review & Confirm View ---
   if (!room || !checkIn || !checkOut) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4">

@@ -34,6 +34,15 @@ export const Bookings: React.FC = () => {
     );
   }
 
+  const getActiveStyles = (f: string) => {
+    switch(f) {
+      case 'PENDING': return 'bg-amber-500 border-amber-500 text-white shadow-xl shadow-amber-500/20 ring-4 ring-amber-50 scale-105 z-10';
+      case 'CONFIRMED': return 'bg-emerald-600 border-emerald-600 text-white shadow-xl shadow-emerald-600/20 ring-4 ring-emerald-50 scale-105 z-10';
+      case 'CANCELLED': return 'bg-rose-600 border-rose-600 text-white shadow-xl shadow-rose-600/20 ring-4 ring-rose-50 scale-105 z-10';
+      default: return 'bg-slate-800 border-slate-800 text-white shadow-xl shadow-slate-800/20 ring-4 ring-slate-100 scale-105 z-10';
+    }
+  };
+
   return (
     <div className="animate-fade-in">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
@@ -42,7 +51,7 @@ export const Bookings: React.FC = () => {
           <p className="text-gray-500 text-sm mt-1">Overview of all guest reservations</p>
         </div>
         
-        <div className="flex flex-wrap items-center gap-3 p-1 bg-gray-100/50 rounded-2xl">
+        <div className="flex flex-wrap items-center gap-3 p-1.5 bg-white border border-gray-200 rounded-2xl shadow-sm">
           {(['ALL', 'PENDING', 'CONFIRMED', 'CANCELLED'] as const).map(f => {
             const isActive = filter === f;
             return (
@@ -52,9 +61,10 @@ export const Bookings: React.FC = () => {
                 className={`
                   relative rounded-xl text-sm font-bold tracking-wide transition-all duration-300 ease-out border flex items-center justify-center
                   ${isActive 
-                    ? 'px-6 py-3 bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-500/30 scale-105 ring-4 ring-blue-50 z-10' 
-                    : 'px-5 py-2.5 bg-white border-transparent text-gray-500 hover:bg-white hover:text-gray-800 hover:shadow-md hover:scale-105 shadow-sm border-gray-200'
+                    ? getActiveStyles(f)
+                    : 'px-5 py-2.5 bg-transparent border-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-800'
                   }
+                  ${isActive ? 'px-6 py-2.5' : ''}
                 `}
               >
                 {f === 'ALL' ? 'All Bookings' : f.charAt(0) + f.slice(1).toLowerCase()}
@@ -91,9 +101,9 @@ export const Bookings: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border shadow-sm
-                      ${booking.status === 'CONFIRMED' ? 'bg-green-50 text-green-700 border-green-200' : 
+                      ${booking.status === 'CONFIRMED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 
                         booking.status === 'PENDING' ? 'bg-amber-50 text-amber-700 border-amber-200' : 
-                        'bg-red-50 text-red-700 border-red-200'}`}>
+                        'bg-rose-50 text-rose-700 border-rose-200'}`}>
                       {booking.status}
                     </span>
                   </td>
@@ -102,14 +112,14 @@ export const Bookings: React.FC = () => {
                       <div className="flex gap-2">
                         <button 
                           onClick={() => handleStatusChange(booking.id, 'CONFIRMED')} 
-                          className="flex items-center gap-1 bg-green-50 text-green-700 hover:bg-green-100 px-3 py-1.5 rounded-lg border border-green-200 transition-colors" 
+                          className="flex items-center gap-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-200 transition-colors" 
                           title="Approve"
                         >
                           <Check size={16} /> <span className="text-xs">Approve</span>
                         </button>
                         <button 
                           onClick={() => handleStatusChange(booking.id, 'REJECTED')} 
-                          className="flex items-center gap-1 bg-red-50 text-red-700 hover:bg-red-100 px-3 py-1.5 rounded-lg border border-red-200 transition-colors" 
+                          className="flex items-center gap-1 bg-rose-50 text-rose-700 hover:bg-rose-100 px-3 py-1.5 rounded-lg border border-rose-200 transition-colors" 
                           title="Reject"
                         >
                           <X size={16} /> <span className="text-xs">Reject</span>

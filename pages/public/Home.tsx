@@ -89,15 +89,15 @@ export const Home: React.FC = () => {
           {HERO_IMAGES.map((img, index) => (
             <div
               key={index}
-              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+              className={`absolute inset-0 transition-opacity duration-[1500ms] ease-in-out ${
                 index === currentHeroIndex ? 'opacity-100' : 'opacity-0'
               }`}
             >
-               {/* Ken Burns Effect: Smoother slow zoom animation */}
+               {/* Ken Burns Effect: Smoother slow zoom animation, reduced to 5% scale */}
                <img 
                  src={img} 
                  className={`w-full h-full object-cover transform transition-transform duration-[10000ms] ease-out will-change-transform ${
-                   index === currentHeroIndex ? 'scale-110' : 'scale-100'
+                   index === currentHeroIndex ? 'scale-105' : 'scale-100'
                  }`} 
                  alt={`Luxury Hotel View ${index + 1}`} 
                />
