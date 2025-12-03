@@ -98,10 +98,10 @@ export const Bookings: React.FC = () => {
                   <td className="px-6 py-4">
                     <button 
                       onClick={() => handleCopyId(booking.id)}
-                      className="group flex items-center gap-2 text-sm font-mono text-gray-500 hover:text-blue-600 transition-colors bg-gray-50 hover:bg-blue-50 px-2 py-1 rounded-md border border-gray-200 hover:border-blue-200"
+                      className="group flex items-center gap-2 text-sm font-mono text-gray-600 hover:text-blue-600 transition-colors bg-gray-50 hover:bg-blue-50 px-2 py-1.5 rounded-md border border-gray-200 hover:border-blue-200"
                       title="Click to Copy ID"
                     >
-                      <span>#{booking.id}</span>
+                      <span className="font-semibold select-all">#{booking.id}</span>
                       <Copy size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                     </button>
                   </td>
