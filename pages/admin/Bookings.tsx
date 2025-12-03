@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getBookings, updateBookingStatus } from '../../services/mockDb';
 import { Booking } from '../../types';
-import { Check, X, Loader2, Filter } from 'lucide-react';
+import { Check, X, Loader2, Filter, Copy } from 'lucide-react';
 
 export const Bookings: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -21,6 +21,11 @@ export const Bookings: React.FC = () => {
   const handleStatusChange = async (id: string, status: Booking['status']) => {
     await updateBookingStatus(id, status);
     loadData();
+  };
+
+  const handleCopyId = (id: string) => {
+    navigator.clipboard.writeText(id);
+    // Optional: could add toast notification here
   };
 
   const filteredBookings = bookings.filter(b => filter === 'ALL' || b.status === filter);
@@ -90,7 +95,16 @@ export const Bookings: React.FC = () => {
             <tbody className="divide-y divide-gray-200">
               {filteredBookings.map(booking => (
                 <tr key={booking.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-6 py-4 text-sm font-mono text-gray-500">#{booking.id}</td>
+                  <td className="px-6 py-4">
+                    <button 
+                      onClick={() => handleCopyId(booking.id)}
+                      className="group flex items-center gap-2 text-sm font-mono text-gray-500 hover:text-blue-600 transition-colors bg-gray-50 hover:bg-blue-50 px-2 py-1 rounded-md border border-gray-200 hover:border-blue-200"
+                      title="Click to Copy ID"
+                    >
+                      <span>#{booking.id}</span>
+                      <Copy size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                  </td>
                   <td className="px-6 py-4 text-sm font-semibold text-gray-900">{booking.guestName}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">Room {booking.roomId}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">
