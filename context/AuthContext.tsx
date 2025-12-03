@@ -18,7 +18,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const storedUser = localStorage.getItem('hms_user');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        // Validate user object structure to prevent crashes
+        if (parsedUser && parsedUser.id && parsedUser.email && parsedUser.role) {
+          setUser(parsedUser);
+        } else {
+          console.warn('Invalid user data found in storage, clearing session.');
+          localStorage.removeItem('hms_user');
+        }
+      } catch (error) {
+        console.error('Failed to parse user session:', error);
+        localStorage.removeItem('hms_user');
+      }
     }
     setIsLoading(false);
   }, []);

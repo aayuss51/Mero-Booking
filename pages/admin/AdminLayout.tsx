@@ -38,17 +38,18 @@ export const AdminLayout: React.FC = () => {
     // If no specific roles are defined, it's open to all authenticated admins
     if (!item.allowedRoles) return true;
     // Check if the current user has one of the allowed roles
-    return user && item.allowedRoles.includes(user.role);
+    // Use optional chaining to be safe
+    return user?.role && item.allowedRoles.includes(user.role);
   });
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 text-white flex flex-col fixed h-full">
+      <aside className="w-64 bg-slate-900 text-white flex flex-col fixed h-full z-10">
         <div className="p-6 border-b border-slate-700">
           <div className="flex flex-col">
-            <h1 className="text-xl font-bold tracking-wider">HotelEase Admin</h1>
-            {user && (
+            <h1 className="text-xl font-bold tracking-wider">Mero-Booking Admin</h1>
+            {user?.role && (
               <span className="text-xs text-slate-400 uppercase mt-1 tracking-wide font-medium">
                 {user.role.replace('_', ' ')}
               </span>
@@ -88,7 +89,7 @@ export const AdminLayout: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 ml-64 p-8 overflow-y-auto">
+      <main className="flex-1 ml-64 p-8 overflow-y-auto min-h-screen">
         <div className="max-w-7xl mx-auto">
           <Outlet />
         </div>

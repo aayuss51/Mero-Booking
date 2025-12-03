@@ -4,7 +4,7 @@ import { RoomType, Facility } from '../../types';
 import { Button } from '../../components/Button';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Users, Wifi, Car, Calendar, Star, Coffee, Waves, Loader2 } from 'lucide-react';
+import { Users, Wifi, Car, Calendar, Star, Coffee, Waves, Loader2, AlertCircle } from 'lucide-react';
 
 // Curated High-End Luxury Images
 const HERO_IMAGES = [
@@ -25,6 +25,7 @@ export const Home: React.FC = () => {
     checkIn: new Date().toISOString().split('T')[0],
     checkOut: new Date(Date.now() + 86400000).toISOString().split('T')[0]
   });
+  const [dateError, setDateError] = useState<string>('');
   
   const [availableRoomIds, setAvailableRoomIds] = useState<string[] | null>(null);
   const [isSearching, setIsSearching] = useState(false);
@@ -53,7 +54,21 @@ export const Home: React.FC = () => {
     };
   }, []);
 
+  const validateDates = () => {
+    const start = new Date(dates.checkIn);
+    const end = new Date(dates.checkOut);
+    
+    if (end <= start) {
+      setDateError('Check-out date must be after check-in date.');
+      return false;
+    }
+    setDateError('');
+    return true;
+  };
+
   const handleSearch = async () => {
+    if (!validateDates()) return;
+
     setIsSearching(true);
     const unavailable = await checkAvailability(dates.checkIn, dates.checkOut);
     const allIds = (await getRooms()).map(r => r.id);
@@ -63,13 +78,7 @@ export const Home: React.FC = () => {
   };
 
   const handleBook = (room: RoomType) => {
-    const start = new Date(dates.checkIn);
-    const end = new Date(dates.checkOut);
-    
-    if (end <= start) {
-        alert("Check-out date must be after check-in date.");
-        return;
-    }
+    if (!validateDates()) return;
 
     navigate(`/book?roomId=${room.id}&checkIn=${dates.checkIn}&checkOut=${dates.checkOut}`);
   };
@@ -125,7 +134,7 @@ export const Home: React.FC = () => {
           </div>
           
           {/* Search Box */}
-          <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-6 rounded-2xl shadow-2xl max-w-5xl w-full flex flex-col lg:flex-row gap-6 items-end text-left mt-8 ring-1 ring-white/20 hover:bg-white/15 transition-colors">
+          <div className="relative bg-white/10 backdrop-blur-xl border border-white/20 p-6 rounded-2xl shadow-2xl max-w-5xl w-full flex flex-col lg:flex-row gap-6 items-end text-left mt-8 ring-1 ring-white/20 hover:bg-white/15 transition-colors">
              <div className="flex-1 w-full">
                <label className="block text-xs font-bold text-blue-100 uppercase tracking-wider mb-2">Check In</label>
                <div className="relative group">
@@ -134,7 +143,11 @@ export const Home: React.FC = () => {
                    type="date" 
                    className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:ring-2 focus:ring-blue-400 focus:bg-white/20 focus:outline-none transition-all"
                    value={dates.checkIn}
-                   onChange={e => setDates({...dates, checkIn: e.target.value})}
+                   min={new Date().toISOString().split('T')[0]}
+                   onChange={e => {
+                     setDates({...dates, checkIn: e.target.value});
+                     setDateError('');
+                   }}
                  />
                </div>
              </div>
@@ -147,7 +160,10 @@ export const Home: React.FC = () => {
                    className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:ring-2 focus:ring-blue-400 focus:bg-white/20 focus:outline-none transition-all"
                    value={dates.checkOut}
                    min={dates.checkIn}
-                   onChange={e => setDates({...dates, checkOut: e.target.value})}
+                   onChange={e => {
+                     setDates({...dates, checkOut: e.target.value});
+                     setDateError('');
+                   }}
                  />
                </div>
              </div>
@@ -159,6 +175,15 @@ export const Home: React.FC = () => {
                {isSearching && <Loader2 className="animate-spin" size={20} />}
                {isSearching ? 'Checking...' : 'Check Availability'}
              </button>
+
+             {dateError && (
+               <div className="absolute -bottom-12 left-0 w-full flex items-center justify-center">
+                 <div className="bg-red-500/90 text-white text-sm px-4 py-2 rounded-full shadow-lg backdrop-blur-md flex items-center gap-2 animate-bounce">
+                   <AlertCircle size={16} />
+                   {dateError}
+                 </div>
+               </div>
+             )}
           </div>
         </div>
 

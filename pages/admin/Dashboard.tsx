@@ -12,26 +12,30 @@ export const Dashboard: React.FC = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const s = await getDashboardStats();
-      const b = await getBookings();
-      const r = await getRooms();
-      
-      setStats(s);
-      
-      // Get recent 5
-      setRecentBookings(b.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5));
+      try {
+        const s = await getDashboardStats();
+        const b = await getBookings();
+        const r = await getRooms();
+        
+        setStats(s);
+        
+        // Get recent 5
+        setRecentBookings(b.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5));
 
-      // Get Occupied Rooms Details
-      const today = new Date().toISOString().split('T')[0];
-      const occupied = b.filter(bk => bk.status === 'CONFIRMED' && bk.checkIn <= today && bk.checkOut > today);
-      
-      const occupiedDetails = occupied.map(bk => {
-        const roomName = r.find(rm => rm.id === bk.roomId)?.name || 'Unknown Room';
-        return { room: roomName, guest: bk.guestName, checkout: bk.checkOut };
-      });
-      setOccupiedRooms(occupiedDetails);
-
-      setIsLoading(false);
+        // Get Occupied Rooms Details
+        const today = new Date().toISOString().split('T')[0];
+        const occupied = b.filter(bk => bk.status === 'CONFIRMED' && bk.checkIn <= today && bk.checkOut > today);
+        
+        const occupiedDetails = occupied.map(bk => {
+          const roomName = r.find(rm => rm.id === bk.roomId)?.name || 'Unknown Room';
+          return { room: roomName, guest: bk.guestName, checkout: bk.checkOut };
+        });
+        setOccupiedRooms(occupiedDetails);
+      } catch (e) {
+        console.error("Dashboard data load failed", e);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     fetchData();
@@ -47,16 +51,16 @@ export const Dashboard: React.FC = () => {
   }
 
   const cards = [
-    { title: 'New Bookings (24h)', value: stats?.newBookings24h, icon: CalendarCheck, gradient: 'from-green-400 to-green-600' },
-    { title: 'Available Rooms', value: stats?.availableRoomsToday, icon: DoorOpen, gradient: 'from-blue-400 to-blue-600' },
-    { title: 'Occupied Rooms', value: stats?.occupiedRoomsToday, icon: Bed, gradient: 'from-orange-400 to-orange-600' },
-    { title: 'Checking Out Today', value: stats?.checkingOutToday, icon: Users, gradient: 'from-purple-400 to-purple-600' },
+    { title: 'New Bookings (24h)', value: stats?.newBookings24h || 0, icon: CalendarCheck, gradient: 'from-green-400 to-green-600' },
+    { title: 'Available Rooms', value: stats?.availableRoomsToday || 0, icon: DoorOpen, gradient: 'from-blue-400 to-blue-600' },
+    { title: 'Occupied Rooms', value: stats?.occupiedRoomsToday || 0, icon: Bed, gradient: 'from-orange-400 to-orange-600' },
+    { title: 'Checking Out Today', value: stats?.checkingOutToday || 0, icon: Users, gradient: 'from-purple-400 to-purple-600' },
   ];
 
   const chartData = [
-    { name: 'Available', value: stats?.availableRoomsToday },
-    { name: 'Occupied', value: stats?.occupiedRoomsToday },
-    { name: 'Due Out', value: stats?.checkingOutToday },
+    { name: 'Available', value: stats?.availableRoomsToday || 0 },
+    { name: 'Occupied', value: stats?.occupiedRoomsToday || 0 },
+    { name: 'Due Out', value: stats?.checkingOutToday || 0 },
   ];
 
   return (
@@ -85,25 +89,29 @@ export const Dashboard: React.FC = () => {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 lg:col-span-2">
           <h3 className="font-bold text-lg mb-6">Room Status Today</h3>
           <div className="h-64">
-             <ResponsiveContainer width="100%" height="100%">
-               <BarChart data={chartData}>
-                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} dy={10} />
-                 <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} />
-                 <Tooltip 
-                   contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'}} 
-                   cursor={{fill: '#F3F4F6'}}
-                 />
-                 <Bar dataKey="value" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={50} />
-               </BarChart>
-             </ResponsiveContainer>
+             {stats ? (
+               <ResponsiveContainer width="100%" height="100%">
+                 <BarChart data={chartData}>
+                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} dy={10} />
+                   <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} />
+                   <Tooltip 
+                     contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'}} 
+                     cursor={{fill: '#F3F4F6'}}
+                   />
+                   <Bar dataKey="value" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={50} />
+                 </BarChart>
+               </ResponsiveContainer>
+             ) : (
+               <div className="flex items-center justify-center h-full text-gray-400">No Data Available</div>
+             )}
           </div>
         </div>
 
         {/* Current Occupancy List */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <h3 className="font-bold text-lg mb-4">Currently Occupied</h3>
-          <div className="space-y-4 max-h-64 overflow-y-auto pr-2">
+          <div className="space-y-4 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
             {occupiedRooms.length === 0 ? (
               <p className="text-gray-500 text-sm">No rooms occupied right now.</p>
             ) : (
