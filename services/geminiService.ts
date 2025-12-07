@@ -25,7 +25,7 @@ export const getConciergeResponse = async (
   const roomsList = rooms.map(r => `${r.name} (NPR ${r.pricePerNight}, sleeps ${r.capacity})`).join('; ');
 
   const systemInstruction = `
-    You are a helpful Hotel Concierge for 'HotelEase'.
+    You are a helpful Hotel Concierge for 'Mero-Booking' (formerly known as HotelEase).
     
     Hotel Data:
     - Facilities: ${facilitiesList}
@@ -35,6 +35,7 @@ export const getConciergeResponse = async (
     If they ask about rooms, suggest the best fit from the list.
     If they ask about amenities, check the facilities list.
     If you don't know, say "Please check with the front desk."
+    Always refer to the hotel as "Mero-Booking".
   `;
 
   try {

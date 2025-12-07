@@ -79,6 +79,10 @@ export const BookingSummary: React.FC = () => {
     const nights = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24));
     const isPending = confirmedBooking.status === 'PENDING';
     
+    // Recalculate breakdown for display
+    const basePrice = room.pricePerNight * nights;
+    const taxAmount = confirmedBooking.totalPrice - basePrice;
+    
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 animate-fade-in print:bg-white print:p-0">
         <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-lg w-full text-center border border-gray-100 relative overflow-hidden print:shadow-none print:border-none print:w-full print:max-w-none">
@@ -157,11 +161,20 @@ export const BookingSummary: React.FC = () => {
              </div>
 
              <div className="mt-6 pt-4 border-t border-slate-200 border-dashed">
-                <div className="flex justify-between items-center">
+                <div className="space-y-2 mb-4">
+                   <div className="flex justify-between text-xs text-gray-500">
+                     <span>Room Rate ({nights} nights)</span>
+                     <span>NPR {basePrice.toLocaleString()}</span>
+                   </div>
+                   <div className="flex justify-between text-xs text-gray-500">
+                     <span>Taxes & Fees (13%)</span>
+                     <span>NPR {taxAmount.toLocaleString()}</span>
+                   </div>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-slate-200">
                     <span className="font-bold text-gray-900">Total Amount</span>
                     <span className="font-bold text-xl text-blue-600 print:text-black">NPR {confirmedBooking.totalPrice.toLocaleString()}</span>
                 </div>
-                <p className="text-[10px] text-gray-400 mt-1">Includes all taxes and fees.</p>
              </div>
            </div>
 

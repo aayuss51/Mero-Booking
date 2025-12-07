@@ -41,11 +41,14 @@ export const Rooms: React.FC = () => {
     e.preventDefault();
     if (currentRoom.name && currentRoom.pricePerNight && currentRoom.description) {
       setIsSubmitting(true);
-      await saveRoom({
+      
+      const roomToSave = {
         ...currentRoom,
         // Use provided image or fallback to picsum placeholder
         imageUrl: currentRoom.imageUrl || `https://picsum.photos/800/600?random=${Math.random()}`
-      } as RoomType);
+      } as RoomType;
+
+      await saveRoom(roomToSave);
       
       await loadData(false); // Background refresh
       setIsSubmitting(false);
@@ -63,6 +66,8 @@ export const Rooms: React.FC = () => {
       };
       reader.readAsDataURL(file);
     }
+    // Reset the input value so the same file can be selected again if needed
+    e.target.value = '';
   };
 
   const toggleFacility = (id: string) => {
@@ -161,11 +166,16 @@ export const Rooms: React.FC = () => {
                     <ImageIcon className="absolute left-3 top-2.5 text-gray-400" size={16} />
                     <input 
                       type="text" 
-                      className="w-full border rounded p-2 pl-9 text-sm" 
+                      className="w-full border rounded p-2 pl-9 text-sm text-gray-600" 
                       placeholder="Paste image URL..."
-                      value={currentRoom.imageUrl || ''} 
+                      value={currentRoom.imageUrl?.startsWith('data:') ? '' : (currentRoom.imageUrl || '')} 
                       onChange={e => setCurrentRoom({...currentRoom, imageUrl: e.target.value})} 
                     />
+                    {currentRoom.imageUrl?.startsWith('data:') && (
+                      <span className="absolute left-10 top-2.5 text-xs text-green-600 bg-green-50 px-2 rounded">
+                        Image Uploaded
+                      </span>
+                    )}
                   </div>
                   
                   <div className="flex items-center gap-2">
@@ -175,29 +185,32 @@ export const Rooms: React.FC = () => {
                   </div>
 
                   {/* File Upload */}
-                  <label className="flex items-center justify-center gap-2 cursor-pointer bg-gray-50 border border-gray-300 border-dashed rounded-lg p-2 hover:bg-gray-100 transition-colors">
-                    <Upload size={16} className="text-gray-500" />
-                    <span className="text-sm text-gray-600">Upload Image</span>
+                  <label className="flex items-center justify-center gap-2 cursor-pointer bg-gray-50 border border-gray-300 border-dashed rounded-lg p-3 hover:bg-gray-100 transition-colors">
+                    <Upload size={18} className="text-gray-500" />
+                    <span className="text-sm text-gray-600 font-medium">Upload Image from Device</span>
                     <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
                   </label>
 
                   {/* Preview */}
                   {currentRoom.imageUrl ? (
-                    <div className="relative w-full h-48 rounded-lg overflow-hidden border border-gray-200 group">
+                    <div className="relative w-full h-48 rounded-lg overflow-hidden border border-gray-200 group bg-gray-50">
                       <ImageWithSkeleton src={currentRoom.imageUrl} alt="Preview" className="w-full h-full object-cover" />
                       <button 
                         type="button"
                         onClick={() => setCurrentRoom({...currentRoom, imageUrl: ''})}
-                        className="absolute top-2 right-2 bg-white/90 p-1.5 rounded-full text-red-600 hover:bg-white shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        className="absolute top-2 right-2 bg-white/90 p-1.5 rounded-full text-red-600 hover:bg-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-10"
                         title="Remove Image"
                       >
                         <X size={16} />
                       </button>
                     </div>
                   ) : (
-                    <p className="text-xs text-gray-400 italic text-center">
-                      * A placeholder image will be used if left empty.
-                    </p>
+                    <div className="w-full h-24 rounded-lg border border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400 bg-gray-50/50">
+                      <ImageIcon size={24} className="mb-2 opacity-50" />
+                      <p className="text-xs italic">
+                        No image selected. A random luxury image will be assigned on save.
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
@@ -223,7 +236,7 @@ export const Rooms: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-3 pt-4 border-t border-gray-100 mt-6">
                <Button type="submit" disabled={isSubmitting} className="min-w-[120px]">
                  {isSubmitting ? <><Loader2 size={16} className="mr-2 animate-spin"/> Saving...</> : 'Save Room'}
                </Button>
@@ -236,7 +249,7 @@ export const Rooms: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {rooms.map(room => (
           <div key={room.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-lg transition-shadow">
-            <div className="h-48 overflow-hidden relative group">
+            <div className="h-48 overflow-hidden relative group bg-gray-100">
               <ImageWithSkeleton src={room.imageUrl} alt={room.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
               <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                  <button onClick={() => handleEdit(room)} className="p-2 bg-white/90 rounded-full hover:text-blue-600 shadow-sm"><Edit2 size={16} /></button>
@@ -332,13 +345,13 @@ export const Rooms: React.FC = () => {
                         aspect-square rounded-lg flex items-center justify-center text-sm font-medium transition-all relative cursor-help
                         ${isBooked 
                           ? (isPending 
-                              ? 'bg-amber-50 text-amber-600 border border-amber-100' 
-                              : 'bg-red-50 text-red-600 border border-red-100')
+                              ? 'bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-100 hover:shadow-sm' 
+                              : 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 hover:shadow-sm')
                           : 'bg-green-50 text-green-700 border border-green-100 hover:bg-green-100'
                         }
                         ${isToday ? 'ring-2 ring-blue-500 ring-offset-1' : ''}
                       `}
-                      title={isBooked ? `${isPending ? 'Pending' : 'Confirmed'}: ${booking?.guestName}` : 'Available'}
+                      title={isBooked ? `${isPending ? 'Pending' : 'Confirmed'} #${booking?.id}\nGuest: ${booking?.guestName}` : 'Available'}
                     >
                       {day}
                     </div>
