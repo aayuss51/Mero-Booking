@@ -8,7 +8,7 @@ import { Lock, Mail } from 'lucide-react';
 export const Login: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
+  const location = useLocation(); 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>('GUEST');
@@ -41,7 +41,8 @@ export const Login: React.FC = () => {
     // 1. If user was redirected here (e.g. from /book), send them back there.
     // 2. If Admin, send to Dashboard.
     // 3. Otherwise, send to Home.
-    const from = location.state?.from?.pathname + (location.state?.from?.search || '') || 
+    const state = location.state as { from?: Location } | null;
+    const from = state?.from?.pathname ? state.from.pathname + (state.from.search || '') : 
                  (role === 'ADMIN' || role === 'SUPER_ADMIN' ? '/admin' : '/');
     
     navigate(from, { replace: true });

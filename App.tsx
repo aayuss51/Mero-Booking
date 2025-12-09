@@ -101,7 +101,10 @@ const App: React.FC = () => {
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/" element={<LayoutWithChat><Home /></LayoutWithChat>} />
+          
+          <Route path="/" element={
+            <LayoutWithChat><Home /></LayoutWithChat>
+          } />
           
           <Route path="/book" element={
             <ProtectedRoute>
@@ -112,7 +115,7 @@ const App: React.FC = () => {
           } />
 
           <Route path="/my-bookings" element={
-            <ProtectedRoute> {/* Removed specific GUEST role requirement to allow Admin testing */}
+            <ProtectedRoute>
               <LayoutWithChat>
                 <MyBookings />
               </LayoutWithChat>
@@ -120,16 +123,23 @@ const App: React.FC = () => {
           } />
 
           {/* Admin Routes */}
-          <Route path="/admin" element={
+          {/* Using wildcard for nested routes handled inside AdminLayout if needed, 
+              but since we switched to wrapping inside here, we use nested Route definition */}
+          <Route path="/admin/*" element={
             <ProtectedRoute requiredRole="ADMIN">
-              <AdminLayout />
+              <AdminLayout>
+                <Routes>
+                  <Route index element={<Dashboard />} />
+                  <Route path="rooms" element={<Rooms />} />
+                  <Route path="facilities" element={<Facilities />} />
+                  <Route path="bookings" element={<Bookings />} />
+                </Routes>
+              </AdminLayout>
             </ProtectedRoute>
-          }>
-            <Route index element={<Dashboard />} />
-            <Route path="rooms" element={<Rooms />} />
-            <Route path="facilities" element={<Facilities />} />
-            <Route path="bookings" element={<Bookings />} />
-          </Route>
+          } />
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </AuthProvider>

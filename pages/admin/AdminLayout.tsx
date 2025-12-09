@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, BedDouble, Dumbbell, CalendarDays, LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types';
@@ -12,9 +12,14 @@ interface NavItem {
   allowedRoles?: UserRole[];
 }
 
-export const AdminLayout: React.FC = () => {
+interface AdminLayoutProps {
+  children?: React.ReactNode;
+}
+
+export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     logout();
@@ -58,23 +63,29 @@ export const AdminLayout: React.FC = () => {
         </div>
         
         <nav className="flex-1 p-4 space-y-2">
-          {visibleNavItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) => 
-                `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+          {visibleNavItems.map((item) => {
+            // Manual active check for v5 compatibility with custom class logic
+            // In v6 we could use NavLink's className function, but keeping logic similar for manual styling control
+            const isActive = item.end 
+              ? location.pathname === item.to 
+              : location.pathname.startsWith(item.to);
+
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                   isActive 
                     ? 'bg-blue-600 text-white' 
                     : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                }`
-              }
-            >
-              <item.icon size={20} />
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
+                }`}
+              >
+                <item.icon size={20} />
+                <span>{item.label}</span>
+              </NavLink>
+            );
+          })}
         </nav>
 
         <div className="p-4 border-t border-slate-700">
@@ -91,7 +102,7 @@ export const AdminLayout: React.FC = () => {
       {/* Main Content */}
       <main className="flex-1 ml-64 p-8 overflow-y-auto min-h-screen">
         <div className="max-w-7xl mx-auto">
-          <Outlet />
+          {children}
         </div>
       </main>
     </div>

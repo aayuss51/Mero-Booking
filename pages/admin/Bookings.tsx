@@ -43,10 +43,14 @@ export const Bookings: React.FC = () => {
 
   const getActiveStyles = (f: string) => {
     switch(f) {
-      case 'PENDING': return 'bg-amber-500 border-amber-600 text-white shadow-lg shadow-amber-500/40 ring-2 ring-amber-200 scale-110 font-extrabold z-20';
-      case 'CONFIRMED': return 'bg-emerald-600 border-emerald-700 text-white shadow-lg shadow-emerald-600/40 ring-2 ring-emerald-200 scale-110 font-extrabold z-20';
-      case 'CANCELLED': return 'bg-rose-600 border-rose-700 text-white shadow-lg shadow-rose-600/40 ring-2 ring-rose-200 scale-110 font-extrabold z-20';
-      default: return 'bg-slate-800 border-slate-900 text-white shadow-lg shadow-slate-800/40 ring-2 ring-slate-200 scale-110 font-extrabold z-20';
+      case 'PENDING': 
+        return 'bg-amber-500 border-amber-700 text-white shadow-xl shadow-amber-500/50 border-2 scale-110 font-bold z-10 transform -translate-y-0.5';
+      case 'CONFIRMED': 
+        return 'bg-emerald-600 border-emerald-800 text-white shadow-xl shadow-emerald-600/50 border-2 scale-110 font-bold z-10 transform -translate-y-0.5';
+      case 'CANCELLED': 
+        return 'bg-rose-600 border-rose-800 text-white shadow-xl shadow-rose-600/50 border-2 scale-110 font-bold z-10 transform -translate-y-0.5';
+      default: 
+        return 'bg-slate-800 border-slate-950 text-white shadow-xl shadow-slate-900/50 border-2 scale-110 font-bold z-10 transform -translate-y-0.5';
     }
   };
 
@@ -58,7 +62,7 @@ export const Bookings: React.FC = () => {
           <p className="text-gray-500 text-sm mt-1">Overview of all guest reservations</p>
         </div>
         
-        <div className="flex flex-wrap items-center gap-3 p-2 bg-white border border-gray-200 rounded-2xl shadow-sm">
+        <div className="flex flex-wrap items-center gap-4 p-3 bg-white border border-gray-200 rounded-2xl shadow-sm">
           {(['ALL', 'PENDING', 'CONFIRMED', 'CANCELLED'] as const).map(f => {
             const isActive = filter === f;
             return (
@@ -66,10 +70,10 @@ export const Bookings: React.FC = () => {
                 key={f}
                 onClick={() => setFilter(f)}
                 className={`
-                  relative rounded-xl text-sm tracking-wide transition-all duration-300 ease-out border flex items-center justify-center
+                  relative rounded-xl text-sm tracking-wide transition-all duration-300 ease-out flex items-center justify-center
                   ${isActive 
                     ? getActiveStyles(f)
-                    : 'px-5 py-2.5 bg-transparent border-transparent text-gray-500 font-medium hover:bg-gray-50 hover:text-gray-800'
+                    : 'px-5 py-2.5 bg-transparent border border-transparent text-gray-500 font-medium hover:bg-gray-50 hover:text-gray-800 hover:border-gray-200'
                   }
                   ${isActive ? 'px-6 py-3' : ''}
                 `}

@@ -141,13 +141,14 @@ export const Home: React.FC = () => {
           </div>
           
           {/* Search Box */}
-          <div className="relative bg-white/10 backdrop-blur-xl border border-white/20 p-6 rounded-2xl shadow-2xl max-w-5xl w-full flex flex-col lg:flex-row gap-6 items-end text-left mt-8 ring-1 ring-white/20 hover:bg-white/15 transition-colors">
+          <div className="relative bg-slate-900/60 backdrop-blur-xl border border-white/20 p-6 rounded-2xl shadow-2xl max-w-5xl w-full flex flex-col lg:flex-row gap-6 items-end text-left mt-8 ring-1 ring-white/20 hover:bg-slate-900/70 transition-colors">
              <div className="flex-1 w-full">
                <label className="block text-xs font-bold text-white uppercase tracking-wider mb-2 drop-shadow-md">Check In</label>
                <div className="relative group">
                  <Calendar className="absolute left-4 top-3.5 text-gray-500 group-focus-within:text-blue-600 transition-colors z-10" size={20} />
                  <input 
                    type="date" 
+                   style={{ colorScheme: 'light' }}
                    className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all shadow-lg"
                    value={dates.checkIn}
                    min={new Date().toISOString().split('T')[0]}
@@ -164,6 +165,7 @@ export const Home: React.FC = () => {
                  <Calendar className="absolute left-4 top-3.5 text-gray-500 group-focus-within:text-blue-600 transition-colors z-10" size={20} />
                  <input 
                    type="date" 
+                   style={{ colorScheme: 'light' }}
                    className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all shadow-lg"
                    value={dates.checkOut}
                    min={getNextDay(dates.checkIn)}
@@ -292,7 +294,7 @@ export const Home: React.FC = () => {
 
                     <div className="flex flex-col gap-3 mt-auto">
                       <Button 
-                        onClick={() => navigate(`/book?roomId=${room.id}&checkIn=${dates.checkIn}&checkOut=${dates.checkOut}`)} 
+                        onClick={() => handleBook(room)} 
                         variant="secondary"
                         className="w-full py-4 text-sm tracking-wide font-semibold bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors rounded-xl flex items-center justify-center gap-2"
                       >

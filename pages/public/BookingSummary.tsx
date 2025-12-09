@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { getRoom, createBooking, getFacilities } from '../../services/mockDb';
 import { RoomType, Facility, Booking } from '../../types';
 import { useAuth } from '../../context/AuthContext';
@@ -8,8 +8,9 @@ import { ImageWithSkeleton } from '../../components/ImageWithSkeleton';
 import { Calendar, Users, ArrowLeft, CheckCircle, Loader2, FileText, Printer, Clock, Share2, Copy, Check } from 'lucide-react';
 
 export const BookingSummary: React.FC = () => {
-  const [searchParams] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
+  const searchParams = new URLSearchParams(location.search);
   const { user } = useAuth();
   
   const roomId = searchParams.get('roomId');

@@ -103,12 +103,13 @@ export const Rooms: React.FC = () => {
 
   const getActiveBookings = (roomId: string) => {
     const today = new Date().toISOString().split('T')[0];
+    // Filter active bookings and sort by most recent check-in to ensure the "most recent" is first
     return bookings.filter(b => 
       b.roomId === roomId && 
       b.status === 'CONFIRMED' &&
       b.checkIn <= today && 
       b.checkOut > today
-    );
+    ).sort((a, b) => new Date(b.checkIn).getTime() - new Date(a.checkIn).getTime());
   };
 
   if (isLoading) {
@@ -277,9 +278,9 @@ export const Rooms: React.FC = () => {
                         Currently Occupied ({activeBookings.length})
                       </p>
                       <div className="space-y-2 max-h-32 overflow-y-auto custom-scrollbar">
-                        {activeBookings.map(b => (
-                          <div key={b.id} className="border-l-2 border-blue-500 pl-2">
-                            <p className="font-mono font-bold text-blue-200">#{b.id}</p>
+                        {activeBookings.map((b, idx) => (
+                          <div key={b.id} className={`pl-2 ${idx === 0 ? 'border-l-2 border-blue-500' : 'border-l-2 border-gray-600'}`}>
+                            <p className={`font-mono font-bold ${idx === 0 ? 'text-blue-200' : 'text-gray-400'}`}>#{b.id}</p>
                             <p className="truncate text-gray-300">{b.guestName}</p>
                           </div>
                         ))}
