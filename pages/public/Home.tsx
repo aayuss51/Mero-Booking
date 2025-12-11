@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getRooms, getFacilities, checkAvailability } from '../../services/mockDb';
-import { RoomType, Facility } from '../../types';
+import { getRooms, getFacilities, checkAvailability, getReviews } from '../../services/mockDb';
+import { RoomType, Facility, Review } from '../../types';
 import { Button } from '../../components/Button';
 import { ImageWithSkeleton } from '../../components/ImageWithSkeleton';
 import { useAuth } from '../../context/AuthContext';
@@ -21,6 +21,7 @@ export const Home: React.FC = () => {
   const navigate = useNavigate();
   const [rooms, setRooms] = useState<RoomType[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   
   const [dates, setDates] = useState({
     checkIn: new Date().toISOString().split('T')[0],
@@ -35,8 +36,10 @@ export const Home: React.FC = () => {
 
   useEffect(() => {
     const init = async () => {
-      setRooms(await getRooms());
-      setFacilities(await getFacilities());
+      const [r, f, rv] = await Promise.all([getRooms(), getFacilities(), getReviews()]);
+      setRooms(r);
+      setFacilities(f);
+      setReviews(rv);
     };
     init();
 
@@ -88,6 +91,15 @@ export const Home: React.FC = () => {
     if (!validateDates()) return;
 
     navigate(`/book?roomId=${room.id}&checkIn=${dates.checkIn}&checkOut=${dates.checkOut}`);
+  };
+
+  const getRoomRating = (roomId: string) => {
+    const roomReviews = reviews.filter(r => r.roomId === roomId);
+    if (roomReviews.length === 0) return { avg: 5.0, count: 0 };
+    
+    const sum = roomReviews.reduce((acc, r) => acc + r.rating, 0);
+    const avg = sum / roomReviews.length;
+    return { avg: parseFloat(avg.toFixed(1)), count: roomReviews.length };
   };
 
   const displayedRooms = availableRoomIds 
@@ -252,64 +264,72 @@ export const Home: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-              {displayedRooms.map(room => (
-                <div key={room.id} className="group bg-white rounded-[32px] shadow-sm hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100 flex flex-col h-full hover:-translate-y-1">
-                  <div className="h-80 relative overflow-hidden">
-                    <ImageWithSkeleton 
-                      src={room.imageUrl} 
-                      alt={room.name} 
-                      className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60"></div>
-                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md border border-white/50 px-5 py-2.5 rounded-2xl text-blue-900 font-bold shadow-lg text-sm">
-                      NPR {room.pricePerNight.toLocaleString()} <span className="text-gray-500 font-normal">/ night</span>
+              {displayedRooms.map(room => {
+                const { avg, count } = getRoomRating(room.id);
+                return (
+                  <div key={room.id} className="group bg-white rounded-[32px] shadow-sm hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100 flex flex-col h-full hover:-translate-y-1">
+                    <div className="h-80 relative overflow-hidden">
+                      <ImageWithSkeleton 
+                        src={room.imageUrl} 
+                        alt={room.name} 
+                        className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60"></div>
+                      <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md border border-white/50 px-5 py-2.5 rounded-2xl text-blue-900 font-bold shadow-lg text-sm">
+                        NPR {room.pricePerNight.toLocaleString()} <span className="text-gray-500 font-normal">/ night</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="p-8 flex-1 flex flex-col">
-                    <div className="flex justify-between items-start mb-4">
-                       <div>
-                         <h3 className="text-2xl font-bold font-serif text-gray-900 mb-1 group-hover:text-blue-700 transition-colors">{room.name}</h3>
-                         <div className="flex items-center gap-4 text-gray-500 text-sm mt-2">
-                           <span className="flex items-center gap-1.5"><Users size={16} className="text-blue-500"/> {room.capacity} Guests</span>
-                           <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                           <span className="flex items-center gap-1.5"><Star size={16} className="text-yellow-400 fill-current"/> 5.0 Rating</span>
+                    <div className="p-8 flex-1 flex flex-col">
+                      <div className="flex justify-between items-start mb-4">
+                         <div>
+                           <h3 className="text-2xl font-bold font-serif text-gray-900 mb-1 group-hover:text-blue-700 transition-colors">{room.name}</h3>
+                           <div className="flex items-center gap-4 text-gray-500 text-sm mt-2">
+                             <span className="flex items-center gap-1.5"><Users size={16} className="text-blue-500"/> {room.capacity} Guests</span>
+                             <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                             <div className="flex items-center gap-1.5" title={`${count} reviews`}>
+                               <Star size={16} className={`fill-current ${count > 0 ? 'text-yellow-400' : 'text-gray-300'}`}/> 
+                               <span className={count > 0 ? 'text-gray-900 font-medium' : 'text-gray-400'}>
+                                 {count > 0 ? `${avg.toFixed(1)} Rating` : 'No ratings yet'}
+                               </span>
+                             </div>
+                           </div>
                          </div>
-                       </div>
-                    </div>
-                    
-                    <p className="text-gray-600 leading-relaxed mb-6 flex-1 border-t border-dashed border-gray-100 pt-4 mt-2">
-                      {room.description}
-                    </p>
-                    
-                    <div className="flex flex-wrap gap-2 mb-8">
-                       {room.facilityIds.slice(0, 4).map(fid => {
-                          const f = facilities.find(fac => fac.id === fid);
-                          return f ? (
-                            <span key={fid} className="text-xs px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-full text-gray-600 font-medium">
-                              {f.name}
-                            </span>
-                          ) : null;
-                       })}
-                    </div>
+                      </div>
+                      
+                      <p className="text-gray-600 leading-relaxed mb-6 flex-1 border-t border-dashed border-gray-100 pt-4 mt-2">
+                        {room.description}
+                      </p>
+                      
+                      <div className="flex flex-wrap gap-2 mb-8">
+                         {room.facilityIds.slice(0, 4).map(fid => {
+                            const f = facilities.find(fac => fac.id === fid);
+                            return f ? (
+                              <span key={fid} className="text-xs px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-full text-gray-600 font-medium">
+                                {f.name}
+                              </span>
+                            ) : null;
+                         })}
+                      </div>
 
-                    <div className="flex flex-col gap-3 mt-auto">
-                      <Button 
-                        onClick={() => handleBook(room)} 
-                        variant="secondary"
-                        className="w-full py-4 text-sm tracking-wide font-semibold bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors rounded-xl flex items-center justify-center gap-2"
-                      >
-                        Book This Room
-                      </Button>
-                      <Button 
-                        onClick={() => handleBook(room)} 
-                        className="w-full py-4 text-sm tracking-wide uppercase font-semibold bg-gray-900 hover:bg-blue-700 transition-colors rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-gray-200"
-                      >
-                        Reserve Now
-                      </Button>
+                      <div className="flex flex-col gap-3 mt-auto">
+                        <Button 
+                          onClick={() => handleBook(room)} 
+                          variant="secondary"
+                          className="w-full py-4 text-sm tracking-wide font-semibold bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors rounded-xl flex items-center justify-center gap-2"
+                        >
+                          Book This Room
+                        </Button>
+                        <Button 
+                          onClick={() => handleBook(room)} 
+                          className="w-full py-4 text-sm tracking-wide uppercase font-semibold bg-gray-900 hover:bg-blue-700 transition-colors rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-gray-200"
+                        >
+                          Reserve Now
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

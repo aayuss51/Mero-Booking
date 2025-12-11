@@ -48,7 +48,7 @@ export const ConciergeChat: React.FC = () => {
     return (
       <button 
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-500 shadow-2xl flex items-center justify-center text-white z-50 hover:scale-105 transition-all duration-300 border border-white/20 backdrop-blur-md group"
+        className="fixed bottom-6 right-6 w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-500 to-amber-600 shadow-2xl shadow-amber-500/30 flex items-center justify-center text-white z-50 hover:scale-105 transition-all duration-300 border border-amber-300 backdrop-blur-md group"
       >
         <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
         <MessageCircle size={30} className="drop-shadow-md" />
@@ -58,9 +58,9 @@ export const ConciergeChat: React.FC = () => {
 
   return (
     <div className="fixed bottom-6 right-6 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl z-50 flex flex-col border border-white/20 overflow-hidden backdrop-blur-3xl ring-1 ring-black/5">
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-4 flex justify-between items-center text-white">
+      <div className="bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 p-4 flex justify-between items-center text-white">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+          <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm border border-white/10">
             <Bot size={20} />
           </div>
           <h3 className="font-semibold tracking-wide">Mero Support</h3>
@@ -75,7 +75,7 @@ export const ConciergeChat: React.FC = () => {
           <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[80%] rounded-2xl p-3.5 text-sm shadow-sm ${
               msg.role === 'user' 
-                ? 'bg-blue-600 text-white rounded-br-none' 
+                ? 'bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-br-none shadow-orange-500/20' 
                 : 'bg-white text-gray-800 border border-gray-100 rounded-bl-none'
             }`}>
               {msg.text}
@@ -85,9 +85,9 @@ export const ConciergeChat: React.FC = () => {
         {isLoading && (
            <div className="flex justify-start">
              <div className="bg-white border border-gray-100 rounded-2xl rounded-bl-none p-4 shadow-sm flex gap-1.5 items-center">
-               <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
-               <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-75"></div>
-               <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-150"></div>
+               <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce"></div>
+               <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce delay-75"></div>
+               <div className="w-2 h-2 bg-amber-600 rounded-full animate-bounce delay-150"></div>
              </div>
            </div>
         )}
@@ -101,9 +101,14 @@ export const ConciergeChat: React.FC = () => {
           onChange={(e) => setInput(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && handleSend()}
           placeholder="Ask about rooms or facilities..."
-          className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+          className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition-all"
         />
-        <Button size="sm" onClick={handleSend} disabled={isLoading || !input.trim()} className="rounded-xl px-3">
+        <Button 
+          size="sm" 
+          onClick={handleSend} 
+          disabled={isLoading || !input.trim()} 
+          className="rounded-xl px-3 !bg-gradient-to-r !from-amber-500 !to-orange-600 !hover:from-amber-600 !hover:to-orange-700 !border-0 !focus:ring-amber-500 shadow-md shadow-orange-500/20"
+        >
           <Send size={18} />
         </Button>
       </div>

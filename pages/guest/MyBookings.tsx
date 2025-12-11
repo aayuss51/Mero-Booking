@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { getUserBookings, getRooms, updateBookingStatus } from '../../services/mockDb';
-import { Booking, RoomType } from '../../types';
-import { Calendar, BedDouble, CheckCircle, Clock, XCircle, RefreshCw, CheckCheck, History, AlertTriangle, Loader2 } from 'lucide-react';
+import { getUserBookings, getRooms, updateBookingStatus, getReviews, saveReview } from '../../services/mockDb';
+import { Booking, RoomType, Review } from '../../types';
+import { Calendar, BedDouble, CheckCircle, Clock, XCircle, RefreshCw, CheckCheck, History, AlertTriangle, Loader2, Star, Edit } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/Button';
 import { ImageWithSkeleton } from '../../components/ImageWithSkeleton';
+import { ReviewModal } from '../../components/ReviewModal';
 
 const getStatusColor = (status: string) => {
   switch(status) {
@@ -37,14 +38,23 @@ const getStatusIcon = (status: string) => {
 interface BookingCardProps {
   booking: Booking;
   rooms: RoomType[];
+  review?: Review;
   onCancel: (id: string) => void;
+  onReview: (booking: Booking) => void;
   isHistory?: boolean;
   isCancelling?: boolean;
 }
 
-const BookingCard: React.FC<BookingCardProps> = ({ booking, rooms, onCancel, isHistory = false, isCancelling = false }) => {
+const BookingCard: React.FC<BookingCardProps> = ({ booking, rooms, review, onCancel, onReview, isHistory = false, isCancelling = false }) => {
   const room = rooms.find(r => r.id === booking.roomId);
   const isCancellable = ['PENDING', 'CONFIRMED'].includes(booking.status);
+  
+  // Review Logic: Can edit within 7 days of checkout
+  const canReview = booking.status === 'COMPLETED';
+  const checkoutDate = new Date(booking.checkOut);
+  const reviewDeadline = new Date(checkoutDate);
+  reviewDeadline.setDate(reviewDeadline.getDate() + 7);
+  const isWithinReviewWindow = new Date() <= reviewDeadline;
 
   return (
     <div className={`rounded-2xl p-6 border transition-all flex flex-col md:flex-row gap-6 ${isHistory ? 'bg-white/60 border-gray-200 opacity-90' : 'bg-white border-gray-200 shadow-sm hover:shadow-md'}`}>
@@ -67,10 +77,12 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, rooms, onCancel, isH
         <div>
           <div className="flex justify-between items-start mb-2">
             <h3 className={`text-xl font-bold ${isHistory ? 'text-gray-600' : 'text-gray-900'}`}>{room?.name || `Room #${booking.roomId}`}</h3>
-            <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-sm ${getStatusColor(booking.status)}`}>
-              {getStatusIcon(booking.status)}
-              {booking.status.charAt(0) + booking.status.slice(1).toLowerCase()}
-            </span>
+            <div className="flex flex-col items-end gap-2">
+              <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-sm ${getStatusColor(booking.status)}`}>
+                {getStatusIcon(booking.status)}
+                {booking.status.charAt(0) + booking.status.slice(1).toLowerCase()}
+              </span>
+            </div>
           </div>
           
           {!isHistory && booking.status === 'PENDING' && (
@@ -107,8 +119,40 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, rooms, onCancel, isH
         </div>
 
         {/* Action Buttons */}
-        {isCancellable && !isHistory && (
-          <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end">
+        <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end gap-3">
+          {canReview && (
+            <div className="flex items-center">
+              {review ? (
+                 isWithinReviewWindow ? (
+                    <Button 
+                      size="sm" 
+                      onClick={() => onReview(booking)}
+                      variant="outline"
+                      className="border-amber-200 text-amber-700 hover:bg-amber-50"
+                    >
+                      <Edit size={14} className="mr-2" /> Edit Review
+                    </Button>
+                 ) : (
+                    <div className="flex items-center gap-2 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100">
+                      <Star size={14} className="text-amber-500 fill-amber-500" />
+                      <span className="text-sm font-bold text-amber-700">{review.rating}/5</span>
+                      <span className="text-xs text-gray-400 border-l border-gray-300 pl-2 ml-1">Review locked</span>
+                    </div>
+                 )
+              ) : (
+                <Button 
+                  size="sm" 
+                  onClick={() => onReview(booking)}
+                  variant="outline"
+                  className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                >
+                  <Star size={14} className="mr-2" /> Rate Stay
+                </Button>
+              )}
+            </div>
+          )}
+
+          {isCancellable && !isHistory && (
               <Button 
                   variant="danger" 
                   size="sm"
@@ -126,8 +170,8 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, rooms, onCancel, isH
                     </>
                   )}
               </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
@@ -137,19 +181,26 @@ export const MyBookings: React.FC = () => {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [rooms, setRooms] = useState<RoomType[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+
+  // Review Modal State
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
   const fetchData = useCallback(async (showGlobalLoading = true) => {
     if (user) {
       if (showGlobalLoading) setIsLoading(true);
-      const [userBookings, allRooms] = await Promise.all([
+      const [userBookings, allRooms, allReviews] = await Promise.all([
         getUserBookings(user.id),
-        getRooms()
+        getRooms(),
+        getReviews()
       ]);
       // Sort by created date descending
       setBookings(userBookings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       setRooms(allRooms);
+      setReviews(allReviews.filter(r => r.userId === user.id));
       if (showGlobalLoading) setIsLoading(false);
     }
   }, [user]);
@@ -162,7 +213,6 @@ export const MyBookings: React.FC = () => {
     if (window.confirm("Are you sure you want to cancel this reservation? This action cannot be undone.")) {
       setCancellingId(bookingId);
       await updateBookingStatus(bookingId, 'CANCELLED');
-      // Refresh data in background without triggering full page loader
       await fetchData(false);
       setCancellingId(null);
     }
@@ -170,6 +220,32 @@ export const MyBookings: React.FC = () => {
 
   const handleRefresh = () => {
     fetchData(true);
+  };
+
+  const handleOpenReview = (booking: Booking) => {
+    setSelectedBooking(booking);
+    setIsReviewModalOpen(true);
+  };
+
+  const handleSaveReview = async (rating: number, comment: string) => {
+    if (!user || !selectedBooking) return;
+    
+    // Check if review already exists
+    const existing = reviews.find(r => r.bookingId === selectedBooking.id);
+    
+    const reviewPayload: Review = {
+        id: existing ? existing.id : '', // Service handles ID generation if empty
+        bookingId: selectedBooking.id,
+        roomId: selectedBooking.roomId,
+        userId: user.id,
+        userName: user.name,
+        rating,
+        comment,
+        createdAt: existing ? existing.createdAt : new Date().toISOString()
+    };
+
+    await saveReview(reviewPayload);
+    await fetchData(false);
   };
 
   if (isLoading) {
@@ -238,8 +314,10 @@ export const MyBookings: React.FC = () => {
                   <BookingCard 
                     key={b.id} 
                     booking={b} 
-                    rooms={rooms} 
+                    rooms={rooms}
+                    review={reviews.find(r => r.bookingId === b.id)}
                     onCancel={handleCancel}
+                    onReview={handleOpenReview}
                     isHistory={false}
                     isCancelling={cancellingId === b.id}
                   />
@@ -274,8 +352,10 @@ export const MyBookings: React.FC = () => {
                     <BookingCard 
                       key={b.id} 
                       booking={b} 
-                      rooms={rooms} 
+                      rooms={rooms}
+                      review={reviews.find(r => r.bookingId === b.id)}
                       onCancel={handleCancel}
+                      onReview={handleOpenReview}
                       isHistory={true} 
                     />
                   ))}
@@ -284,6 +364,16 @@ export const MyBookings: React.FC = () => {
             </section>
           )}
         </div>
+      )}
+
+      {selectedBooking && (
+        <ReviewModal 
+          isOpen={isReviewModalOpen}
+          onClose={() => setIsReviewModalOpen(false)}
+          booking={selectedBooking}
+          existingReview={reviews.find(r => r.bookingId === selectedBooking.id)}
+          onSave={handleSaveReview}
+        />
       )}
     </div>
   );

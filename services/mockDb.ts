@@ -1,4 +1,4 @@
-import { Facility, RoomType, Booking, User, DashboardStats } from '../types';
+import { Facility, RoomType, Booking, User, DashboardStats, Review } from '../types';
 
 // Initial Seed Data
 const INITIAL_FACILITIES: Facility[] = [
@@ -67,6 +67,29 @@ const INITIAL_BOOKINGS: Booking[] = [
   }
 ];
 
+const INITIAL_REVIEWS: Review[] = [
+  {
+    id: 'rv-demo-1',
+    bookingId: 'BK-DEMO1',
+    roomId: '101',
+    userId: 'u-demo',
+    userName: 'Sarah Jenkins',
+    rating: 5,
+    comment: 'Absolutely breathtaking views and the butler service was top-notch.',
+    createdAt: new Date(Date.now() - 86400000 * 10).toISOString()
+  },
+  {
+    id: 'rv-demo-2',
+    bookingId: 'BK-DEMO2',
+    roomId: '102',
+    userId: 'u-demo2',
+    userName: 'Michael Chen',
+    rating: 4,
+    comment: 'Great villa, but the pool water was a bit too cold for my liking.',
+    createdAt: new Date(Date.now() - 86400000 * 5).toISOString()
+  }
+];
+
 // Helper to simulate DB delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -75,6 +98,7 @@ const KEYS = {
   FACILITIES: 'hms_facilities',
   ROOMS: 'hms_rooms',
   BOOKINGS: 'hms_bookings',
+  REVIEWS: 'hms_reviews',
 };
 
 // --- Facilities Service ---
@@ -165,6 +189,33 @@ export const updateBookingStatus = async (id: string, status: Booking['status'])
   const current = await getBookings();
   const updated = current.map(b => b.id === id ? { ...b, status } : b);
   localStorage.setItem(KEYS.BOOKINGS, JSON.stringify(updated));
+};
+
+// --- Reviews Service ---
+export const getReviews = async (): Promise<Review[]> => {
+  await delay(300);
+  const stored = localStorage.getItem(KEYS.REVIEWS);
+  return stored ? JSON.parse(stored) : INITIAL_REVIEWS;
+};
+
+export const saveReview = async (review: Review): Promise<Review> => {
+  await delay(500);
+  const current = await getReviews();
+  const index = current.findIndex(r => r.id === review.id);
+  
+  let savedReview: Review;
+  let updatedReviews;
+  
+  if (index >= 0) {
+    savedReview = { ...review, updatedAt: new Date().toISOString() };
+    updatedReviews = [...current];
+    updatedReviews[index] = savedReview;
+  } else {
+    savedReview = { ...review, id: `rv-${Math.random().toString(36).substr(2, 9)}`, createdAt: new Date().toISOString() };
+    updatedReviews = [...current, savedReview];
+  }
+  localStorage.setItem(KEYS.REVIEWS, JSON.stringify(updatedReviews));
+  return savedReview;
 };
 
 // --- Stats Service ---
