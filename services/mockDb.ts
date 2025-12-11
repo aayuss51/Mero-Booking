@@ -1,4 +1,4 @@
-import { Facility, RoomType, Booking, User, DashboardStats, Review } from '../types';
+import { Facility, RoomType, Booking, User, DashboardStats, Review, UserRole } from '../types';
 
 // Initial Seed Data
 const INITIAL_FACILITIES: Facility[] = [
@@ -63,6 +63,8 @@ const INITIAL_BOOKINGS: Booking[] = [
     checkOut: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
     totalPrice: 1050000,
     status: 'CONFIRMED',
+    paymentMethod: 'ESEWA',
+    paymentStatus: 'PAID',
     createdAt: new Date(Date.now() - 86400000).toISOString(),
   }
 ];
@@ -90,6 +92,14 @@ const INITIAL_REVIEWS: Review[] = [
   }
 ];
 
+const INITIAL_USERS: User[] = [
+  { id: 'super_admin1', name: 'Super Admin', email: 'super@mero-booking.com', role: 'SUPER_ADMIN' },
+  { id: 'admin1', name: 'Administrator', email: 'admin@mero-booking.com', role: 'ADMIN' },
+  { id: 'u2', name: 'Alexander Hamilton', email: 'alex@history.com', role: 'GUEST' },
+  { id: 'u-demo', name: 'Sarah Jenkins', email: 'sarah@example.com', role: 'GUEST' },
+  { id: 'u-demo2', name: 'Michael Chen', email: 'michael@example.com', role: 'GUEST' },
+];
+
 // Helper to simulate DB delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -99,6 +109,7 @@ const KEYS = {
   ROOMS: 'hms_rooms',
   BOOKINGS: 'hms_bookings',
   REVIEWS: 'hms_reviews',
+  USERS: 'hms_users',
 };
 
 // --- Facilities Service ---
@@ -166,7 +177,7 @@ export const getUserBookings = async (userId: string): Promise<Booking[]> => {
   return bookings.filter(b => b.userId === userId);
 };
 
-export const createBooking = async (booking: Omit<Booking, 'id' | 'createdAt' | 'status'>): Promise<Booking> => {
+export const createBooking = async (booking: Omit<Booking, 'id' | 'createdAt' | 'status'> & { status?: Booking['status'] }): Promise<Booking> => {
   await delay(600); // Slightly longer for "processing" feel
   const current = await getBookings();
   
@@ -175,9 +186,9 @@ export const createBooking = async (booking: Omit<Booking, 'id' | 'createdAt' | 
   const bookingId = `BK-${randomStr}`;
 
   const newBooking: Booking = {
+    status: 'PENDING', // Default if not provided
     ...booking,
     id: bookingId,
-    status: 'PENDING',
     createdAt: new Date().toISOString()
   };
   localStorage.setItem(KEYS.BOOKINGS, JSON.stringify([...current, newBooking]));
@@ -189,6 +200,44 @@ export const updateBookingStatus = async (id: string, status: Booking['status'])
   const current = await getBookings();
   const updated = current.map(b => b.id === id ? { ...b, status } : b);
   localStorage.setItem(KEYS.BOOKINGS, JSON.stringify(updated));
+};
+
+export const updateBookingDetails = async (
+  id: string, 
+  updates: { checkIn: string; checkOut: string }
+): Promise<Booking> => {
+  await delay(600);
+  const bookings = await getBookings();
+  const rooms = await getRooms();
+  
+  const index = bookings.findIndex(b => b.id === id);
+  if (index === -1) throw new Error('Booking not found');
+
+  const booking = bookings[index];
+  const room = rooms.find(r => r.id === booking.roomId);
+
+  if (!room) throw new Error('Room not found');
+
+  // Recalculate Price
+  const start = new Date(updates.checkIn);
+  const end = new Date(updates.checkOut);
+  const nights = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)));
+  
+  const baseCost = nights * room.pricePerNight;
+  const taxes = baseCost * 0.13; // 13% tax
+  const totalPrice = Math.floor(baseCost + taxes);
+
+  const updatedBooking = {
+    ...booking,
+    ...updates,
+    totalPrice
+  };
+
+  const updatedList = [...bookings];
+  updatedList[index] = updatedBooking;
+  
+  localStorage.setItem(KEYS.BOOKINGS, JSON.stringify(updatedList));
+  return updatedBooking;
 };
 
 // --- Reviews Service ---
@@ -216,6 +265,20 @@ export const saveReview = async (review: Review): Promise<Review> => {
   }
   localStorage.setItem(KEYS.REVIEWS, JSON.stringify(updatedReviews));
   return savedReview;
+};
+
+// --- User Management Service ---
+export const getUsers = async (): Promise<User[]> => {
+  await delay(400);
+  const stored = localStorage.getItem(KEYS.USERS);
+  return stored ? JSON.parse(stored) : INITIAL_USERS;
+};
+
+export const updateUserRole = async (userId: string, role: UserRole): Promise<void> => {
+  await delay(500);
+  const current = await getUsers();
+  const updated = current.map(u => u.id === userId ? { ...u, role } : u);
+  localStorage.setItem(KEYS.USERS, JSON.stringify(updated));
 };
 
 // --- Stats Service ---

@@ -25,6 +25,8 @@ export interface RoomType {
 }
 
 export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'CANCELLED' | 'COMPLETED';
+export type PaymentMethod = 'CASH' | 'ESEWA' | 'KHALTI';
+export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED';
 
 export interface Booking {
   id: string;
@@ -35,6 +37,8 @@ export interface Booking {
   checkOut: string; // ISO Date string YYYY-MM-DD
   totalPrice: number;
   status: BookingStatus;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
   createdAt: string;
 }
 

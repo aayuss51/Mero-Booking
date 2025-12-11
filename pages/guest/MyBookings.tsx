@@ -1,12 +1,16 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { getUserBookings, getRooms, updateBookingStatus, getReviews, saveReview } from '../../services/mockDb';
-import { Booking, RoomType, Review } from '../../types';
-import { Calendar, BedDouble, CheckCircle, Clock, XCircle, RefreshCw, CheckCheck, History, AlertTriangle, Loader2, Star, Edit } from 'lucide-react';
+import { getUserBookings, getRooms, updateBookingStatus, updateBookingDetails } from '../../services/mockDb';
+import { Booking, RoomType } from '../../types';
+import { Calendar, BedDouble, CheckCircle, Clock, XCircle, RefreshCw, CheckCheck, History, AlertTriangle, Loader2, Pencil, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/Button';
 import { ImageWithSkeleton } from '../../components/ImageWithSkeleton';
 import { ReviewModal } from '../../components/ReviewModal';
+import { saveReview, getReviews } from '../../services/mockDb';
+import { Review } from '../../types';
+import { EditBookingModal } from '../../components/EditBookingModal';
+import { ConfirmationModal } from '../../components/ConfirmationModal';
 
 const getStatusColor = (status: string) => {
   switch(status) {
@@ -38,23 +42,41 @@ const getStatusIcon = (status: string) => {
 interface BookingCardProps {
   booking: Booking;
   rooms: RoomType[];
-  review?: Review;
   onCancel: (id: string) => void;
+  onEdit: (booking: Booking) => void;
   onReview: (booking: Booking) => void;
+  onCheckout: (id: string) => void;
   isHistory?: boolean;
-  isCancelling?: boolean;
+  canReview?: boolean;
 }
 
-const BookingCard: React.FC<BookingCardProps> = ({ booking, rooms, review, onCancel, onReview, isHistory = false, isCancelling = false }) => {
+const BookingCard: React.FC<BookingCardProps> = ({ 
+  booking, 
+  rooms, 
+  onCancel, 
+  onEdit, 
+  onReview, 
+  onCheckout,
+  isHistory = false, 
+  canReview = false
+}) => {
   const room = rooms.find(r => r.id === booking.roomId);
   const isCancellable = ['PENDING', 'CONFIRMED'].includes(booking.status);
   
-  // Review Logic: Can edit within 7 days of checkout
-  const canReview = booking.status === 'COMPLETED';
-  const checkoutDate = new Date(booking.checkOut);
-  const reviewDeadline = new Date(checkoutDate);
-  reviewDeadline.setDate(reviewDeadline.getDate() + 7);
-  const isWithinReviewWindow = new Date() <= reviewDeadline;
+  // Cutoff Logic: 24h before Check-in
+  const canEdit = React.useMemo(() => {
+    if (!['PENDING', 'CONFIRMED'].includes(booking.status)) return false;
+    
+    // Parse Date strictly
+    const checkInDate = new Date(booking.checkIn); 
+    const now = new Date();
+    
+    const timeDiff = checkInDate.getTime() - now.getTime();
+    const hoursDiff = timeDiff / (1000 * 3600);
+    
+    // Allow edit only if more than 24 hours remaining
+    return hoursDiff >= 24; 
+  }, [booking.checkIn, booking.status]);
 
   return (
     <div className={`rounded-2xl p-6 border transition-all flex flex-col md:flex-row gap-6 ${isHistory ? 'bg-white/60 border-gray-200 opacity-90' : 'bg-white border-gray-200 shadow-sm hover:shadow-md'}`}>
@@ -77,11 +99,14 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, rooms, review, onCan
         <div>
           <div className="flex justify-between items-start mb-2">
             <h3 className={`text-xl font-bold ${isHistory ? 'text-gray-600' : 'text-gray-900'}`}>{room?.name || `Room #${booking.roomId}`}</h3>
-            <div className="flex flex-col items-end gap-2">
-              <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-sm ${getStatusColor(booking.status)}`}>
-                {getStatusIcon(booking.status)}
-                {booking.status.charAt(0) + booking.status.slice(1).toLowerCase()}
-              </span>
+            <div className="flex flex-col items-end gap-1">
+               <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-sm ${getStatusColor(booking.status)}`}>
+                 {getStatusIcon(booking.status)}
+                 {booking.status.charAt(0) + booking.status.slice(1).toLowerCase()}
+               </span>
+               {booking.paymentStatus === 'PAID' && (
+                 <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded border border-green-100">PAID</span>
+               )}
             </div>
           </div>
           
@@ -119,58 +144,50 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, rooms, review, onCan
         </div>
 
         {/* Action Buttons */}
-        <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end gap-3">
-          {canReview && (
-            <div className="flex items-center">
-              {review ? (
-                 isWithinReviewWindow ? (
-                    <Button 
-                      size="sm" 
-                      onClick={() => onReview(booking)}
-                      variant="outline"
-                      className="border-amber-200 text-amber-700 hover:bg-amber-50"
-                    >
-                      <Edit size={14} className="mr-2" /> Edit Review
-                    </Button>
-                 ) : (
-                    <div className="flex items-center gap-2 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100">
-                      <Star size={14} className="text-amber-500 fill-amber-500" />
-                      <span className="text-sm font-bold text-amber-700">{review.rating}/5</span>
-                      <span className="text-xs text-gray-400 border-l border-gray-300 pl-2 ml-1">Review locked</span>
-                    </div>
-                 )
-              ) : (
-                <Button 
-                  size="sm" 
-                  onClick={() => onReview(booking)}
-                  variant="outline"
-                  className="border-blue-200 text-blue-700 hover:bg-blue-50"
-                >
-                  <Star size={14} className="mr-2" /> Rate Stay
-                </Button>
-              )}
-            </div>
-          )}
+        <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end gap-3 flex-wrap">
+             {canEdit && (
+               <Button
+                 variant="secondary"
+                 size="sm"
+                 onClick={() => onEdit(booking)}
+                 className="rounded-lg border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-200"
+                 title="Edit booking dates (Available up to 24h before check-in)"
+               >
+                 <Pencil size={14} className="mr-2" /> Edit Details
+               </Button>
+             )}
 
-          {isCancellable && !isHistory && (
-              <Button 
-                  variant="danger" 
+             {/* Checkout Button for Confirmed Bookings */}
+             {!isHistory && booking.status === 'CONFIRMED' && (
+               <Button
+                 size="sm"
+                 onClick={() => onCheckout(booking.id)}
+                 className="rounded-lg shadow-sm bg-blue-600 hover:bg-blue-700 text-white"
+               >
+                 <LogOut size={16} className="mr-2" /> Check Out
+               </Button>
+             )}
+
+             {canReview && (
+               <Button 
                   size="sm"
-                  onClick={() => onCancel(booking.id)}
-                  disabled={isCancelling}
-                  className="rounded-lg shadow-sm border border-red-200 bg-red-50 text-red-700 hover:bg-red-600 hover:text-white transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                  {isCancelling ? (
-                    <>
-                      <Loader2 size={16} className="mr-2 animate-spin" /> Cancelling...
-                    </>
-                  ) : (
-                    <>
-                      <AlertTriangle size={16} className="mr-2" /> Cancel Booking
-                    </>
-                  )}
-              </Button>
-          )}
+                  onClick={() => onReview(booking)}
+                  className="rounded-lg shadow-sm bg-amber-500 hover:bg-amber-600 border-none text-white"
+               >
+                  <span className="flex items-center gap-2">Write Review</span>
+               </Button>
+             )}
+        
+            {isCancellable && !isHistory && (
+                 <Button 
+                    variant="danger" 
+                    size="sm"
+                    onClick={() => onCancel(booking.id)}
+                    className="rounded-lg shadow-sm border border-red-200 bg-red-50 text-red-700 hover:bg-red-600 hover:text-white transition-all duration-300"
+                 >
+                    <AlertTriangle size={16} className="mr-2" /> Cancel Booking
+                 </Button>
+            )}
         </div>
       </div>
     </div>
@@ -183,13 +200,27 @@ export const MyBookings: React.FC = () => {
   const [rooms, setRooms] = useState<RoomType[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
+
+  // Cancel Modal State
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<string | null>(null);
+  const [isProcessingCancel, setIsProcessingCancel] = useState(false);
+
+  // Checkout Modal State
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [bookingToCheckout, setBookingToCheckout] = useState<string | null>(null);
+  const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
 
   // Review Modal State
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [selectedBookingForReview, setSelectedBookingForReview] = useState<Booking | null>(null);
+  const [userReviewForBooking, setUserReviewForBooking] = useState<Review | undefined>(undefined);
 
-  const fetchData = useCallback(async (showGlobalLoading = true) => {
+  // Edit Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedBookingForEdit, setSelectedBookingForEdit] = useState<{booking: Booking, room: RoomType} | null>(null);
+
+  const fetchData = async (showGlobalLoading = true) => {
     if (user) {
       if (showGlobalLoading) setIsLoading(true);
       const [userBookings, allRooms, allReviews] = await Promise.all([
@@ -200,52 +231,112 @@ export const MyBookings: React.FC = () => {
       // Sort by created date descending
       setBookings(userBookings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       setRooms(allRooms);
-      setReviews(allReviews.filter(r => r.userId === user.id));
+      setReviews(allReviews);
       if (showGlobalLoading) setIsLoading(false);
     }
-  }, [user]);
+  };
 
   useEffect(() => {
     fetchData(true);
-  }, [fetchData]);
+  }, [user]);
 
-  const handleCancel = async (bookingId: string) => {
-    if (window.confirm("Are you sure you want to cancel this reservation? This action cannot be undone.")) {
-      setCancellingId(bookingId);
-      await updateBookingStatus(bookingId, 'CANCELLED');
+  const handleCancelClick = (bookingId: string) => {
+    setBookingToCancel(bookingId);
+    setIsCancelModalOpen(true);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (bookingToCancel) {
+      setIsProcessingCancel(true);
+      await updateBookingStatus(bookingToCancel, 'CANCELLED');
       await fetchData(false);
-      setCancellingId(null);
+      setIsProcessingCancel(false);
+      setIsCancelModalOpen(false);
+      setBookingToCancel(null);
     }
+  };
+
+  const handleCheckoutClick = (bookingId: string) => {
+    setBookingToCheckout(bookingId);
+    setIsCheckoutModalOpen(true);
+  };
+
+  const handleConfirmCheckout = async () => {
+    if (bookingToCheckout) {
+      setIsProcessingCheckout(true);
+      
+      // Capture the booking object before it's moved to history/updated
+      const booking = bookings.find(b => b.id === bookingToCheckout);
+      
+      await updateBookingStatus(bookingToCheckout, 'COMPLETED');
+      await fetchData(false);
+      
+      setIsProcessingCheckout(false);
+      setIsCheckoutModalOpen(false);
+      setBookingToCheckout(null);
+
+      // Automatically navigate to Review Page (Modal) after successful checkout
+      if (booking) {
+         setSelectedBookingForReview({ ...booking, status: 'COMPLETED' });
+         setUserReviewForBooking(undefined);
+         setIsReviewModalOpen(true);
+      }
+    }
+  };
+
+  const handleEditClick = (booking: Booking) => {
+    const room = rooms.find(r => r.id === booking.roomId);
+    if (room) {
+      setSelectedBookingForEdit({ booking, room });
+      setIsEditModalOpen(true);
+    }
+  };
+
+  const handleEditSave = async (checkIn: string, checkOut: string) => {
+    if (selectedBookingForEdit) {
+      await updateBookingDetails(selectedBookingForEdit.booking.id, { checkIn, checkOut });
+      await fetchData(false);
+    }
+  };
+
+  const handleReviewClick = (booking: Booking) => {
+    const existing = reviews.find(r => r.bookingId === booking.id);
+    setSelectedBookingForReview(booking);
+    setUserReviewForBooking(existing);
+    setIsReviewModalOpen(true);
+  };
+
+  const handleSaveReview = async (rating: number, comment: string) => {
+    if (!user || !selectedBookingForReview) return;
+    
+    await saveReview({
+      id: userReviewForBooking?.id || '', // Empty ID tells service to create new
+      bookingId: selectedBookingForReview.id,
+      roomId: selectedBookingForReview.roomId,
+      userId: user.id,
+      userName: user.name,
+      rating,
+      comment,
+      createdAt: new Date().toISOString()
+    });
+    
+    // Refresh data
+    const updatedReviews = await getReviews();
+    setReviews(updatedReviews);
   };
 
   const handleRefresh = () => {
     fetchData(true);
   };
 
-  const handleOpenReview = (booking: Booking) => {
-    setSelectedBooking(booking);
-    setIsReviewModalOpen(true);
-  };
-
-  const handleSaveReview = async (rating: number, comment: string) => {
-    if (!user || !selectedBooking) return;
-    
-    // Check if review already exists
-    const existing = reviews.find(r => r.bookingId === selectedBooking.id);
-    
-    const reviewPayload: Review = {
-        id: existing ? existing.id : '', // Service handles ID generation if empty
-        bookingId: selectedBooking.id,
-        roomId: selectedBooking.roomId,
-        userId: user.id,
-        userName: user.name,
-        rating,
-        comment,
-        createdAt: existing ? existing.createdAt : new Date().toISOString()
-    };
-
-    await saveReview(reviewPayload);
-    await fetchData(false);
+  const checkReviewEligibility = (booking: Booking) => {
+    if (booking.status !== 'COMPLETED') return false;
+    // Check if within 7 days of checkout
+    const checkoutDate = new Date(booking.checkOut);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - checkoutDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    return diffDays <= 7;
   };
 
   if (isLoading) {
@@ -314,12 +405,12 @@ export const MyBookings: React.FC = () => {
                   <BookingCard 
                     key={b.id} 
                     booking={b} 
-                    rooms={rooms}
-                    review={reviews.find(r => r.bookingId === b.id)}
-                    onCancel={handleCancel}
-                    onReview={handleOpenReview}
+                    rooms={rooms} 
+                    onCancel={handleCancelClick}
+                    onEdit={handleEditClick}
+                    onReview={() => {}} // Can't review active bookings
+                    onCheckout={handleCheckoutClick}
                     isHistory={false}
-                    isCancelling={cancellingId === b.id}
                   />
                 ))}
               </div>
@@ -352,10 +443,12 @@ export const MyBookings: React.FC = () => {
                     <BookingCard 
                       key={b.id} 
                       booking={b} 
-                      rooms={rooms}
-                      review={reviews.find(r => r.bookingId === b.id)}
-                      onCancel={handleCancel}
-                      onReview={handleOpenReview}
+                      rooms={rooms} 
+                      onCancel={handleCancelClick}
+                      onEdit={() => {}} // Can't edit history
+                      onReview={handleReviewClick}
+                      onCheckout={() => {}} // Can't checkout history
+                      canReview={checkReviewEligibility(b)}
                       isHistory={true} 
                     />
                   ))}
@@ -366,15 +459,49 @@ export const MyBookings: React.FC = () => {
         </div>
       )}
 
-      {selectedBooking && (
+      {/* Review Modal */}
+      {selectedBookingForReview && (
         <ReviewModal 
           isOpen={isReviewModalOpen}
           onClose={() => setIsReviewModalOpen(false)}
-          booking={selectedBooking}
-          existingReview={reviews.find(r => r.bookingId === selectedBooking.id)}
+          booking={selectedBookingForReview}
+          existingReview={userReviewForBooking}
           onSave={handleSaveReview}
         />
       )}
+
+      {/* Edit Booking Modal */}
+      {selectedBookingForEdit && (
+        <EditBookingModal 
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          booking={selectedBookingForEdit.booking}
+          room={selectedBookingForEdit.room}
+          onSave={handleEditSave}
+        />
+      )}
+
+      {/* Confirmation Modal for Cancellation */}
+      <ConfirmationModal
+        isOpen={isCancelModalOpen}
+        onClose={() => setIsCancelModalOpen(false)}
+        onConfirm={handleConfirmCancel}
+        title="Cancel Booking?"
+        message="Are you sure you want to cancel this booking? This action cannot be undone."
+        confirmLabel="Yes, Cancel Booking"
+        isProcessing={isProcessingCancel}
+      />
+
+      {/* Confirmation Modal for Checkout */}
+      <ConfirmationModal
+        isOpen={isCheckoutModalOpen}
+        onClose={() => setIsCheckoutModalOpen(false)}
+        onConfirm={handleConfirmCheckout}
+        title="Confirm Check Out"
+        message="Are you sure you want to checkout? This will complete your stay and move the booking to history."
+        confirmLabel="Yes, Check Out"
+        isProcessing={isProcessingCheckout}
+      />
     </div>
   );
 };

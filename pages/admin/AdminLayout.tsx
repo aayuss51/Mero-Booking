@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, BedDouble, Dumbbell, CalendarDays, LogOut } from 'lucide-react';
+import { LayoutDashboard, BedDouble, Dumbbell, CalendarDays, LogOut, Shield } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types';
 
@@ -8,7 +8,7 @@ interface NavItem {
   to: string;
   label: string;
   icon: React.ElementType;
-  end: boolean;
+  exact: boolean;
   allowedRoles?: UserRole[];
 }
 
@@ -31,16 +31,23 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   }
 
   const navItems: NavItem[] = [
-    { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
-    { to: '/admin/rooms', label: 'Rooms', icon: BedDouble, end: false },
+    { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+    { to: '/admin/rooms', label: 'Rooms', icon: BedDouble, exact: false },
     { 
       to: '/admin/facilities', 
       label: 'Facilities', 
       icon: Dumbbell, 
-      end: false, 
+      exact: false, 
       allowedRoles: ['SUPER_ADMIN'] // Only Super Admin can manage facilities
     },
-    { to: '/admin/bookings', label: 'Bookings', icon: CalendarDays, end: false },
+    { to: '/admin/bookings', label: 'Bookings', icon: CalendarDays, exact: false },
+    { 
+      to: '/admin/users', 
+      label: 'Users', 
+      icon: Shield, 
+      exact: false, 
+      allowedRoles: ['SUPER_ADMIN'] // Only Super Admin can manage users
+    },
   ];
 
   const visibleNavItems = navItems.filter(item => {
@@ -72,12 +79,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.end}
-              className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                isActive 
-                  ? 'bg-blue-600 text-white' 
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
+              end={item.exact}
+              className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
             >
               <item.icon size={20} />
               <span>{item.label}</span>

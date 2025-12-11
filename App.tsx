@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -10,6 +11,7 @@ import { Dashboard } from './pages/admin/Dashboard';
 import { Rooms } from './pages/admin/Rooms';
 import { Facilities } from './pages/admin/Facilities';
 import { Bookings } from './pages/admin/Bookings';
+import { Users } from './pages/admin/Users';
 import { MyBookings } from './pages/guest/MyBookings';
 import { ConciergeChat } from './components/ConciergeChat';
 import { UserRole } from './types';
@@ -102,9 +104,7 @@ const App: React.FC = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           
-          <Route path="/" element={
-            <LayoutWithChat><Home /></LayoutWithChat>
-          } />
+          <Route path="/" element={<LayoutWithChat><Home /></LayoutWithChat>} />
           
           <Route path="/book" element={
             <ProtectedRoute>
@@ -123,8 +123,6 @@ const App: React.FC = () => {
           } />
 
           {/* Admin Routes */}
-          {/* Using wildcard for nested routes handled inside AdminLayout if needed, 
-              but since we switched to wrapping inside here, we use nested Route definition */}
           <Route path="/admin/*" element={
             <ProtectedRoute requiredRole="ADMIN">
               <AdminLayout>
@@ -133,6 +131,11 @@ const App: React.FC = () => {
                   <Route path="rooms" element={<Rooms />} />
                   <Route path="facilities" element={<Facilities />} />
                   <Route path="bookings" element={<Bookings />} />
+                  <Route path="users" element={
+                    <ProtectedRoute requiredRole="SUPER_ADMIN">
+                      <Users />
+                    </ProtectedRoute>
+                  } />
                 </Routes>
               </AdminLayout>
             </ProtectedRoute>

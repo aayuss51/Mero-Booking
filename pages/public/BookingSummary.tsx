@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getRoom, createBooking, getFacilities } from '../../services/mockDb';
-import { RoomType, Facility, Booking } from '../../types';
+import { RoomType, Facility, Booking, PaymentMethod } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/Button';
 import { ImageWithSkeleton } from '../../components/ImageWithSkeleton';
-import { Calendar, Users, ArrowLeft, CheckCircle, Loader2, FileText, Printer, Clock, Share2, Copy, Check } from 'lucide-react';
+import { Calendar, Users, ArrowLeft, CheckCircle, Loader2, FileText, Printer, Clock, Share2, Copy, Check, Banknote, ShieldCheck, AlertCircle } from 'lucide-react';
 
 export const BookingSummary: React.FC = () => {
   const location = useLocation();
@@ -23,6 +23,13 @@ export const BookingSummary: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
   const [isCopied, setIsCopied] = useState(false);
+  
+  // Payment State
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  // Confirmation Modal State
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -79,6 +86,7 @@ export const BookingSummary: React.FC = () => {
     const endDate = new Date(confirmedBooking.checkOut);
     const nights = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24));
     const isPending = confirmedBooking.status === 'PENDING';
+    const isPaid = confirmedBooking.paymentStatus === 'PAID';
     
     // Recalculate breakdown for display
     const basePrice = room.pricePerNight * nights;
@@ -95,12 +103,12 @@ export const BookingSummary: React.FC = () => {
            </div>
            
            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-             Booking Successful!
+             Booking {isPending ? 'Request Sent' : 'Confirmed'}!
            </h1>
            <p className="text-gray-500 mb-8 print:hidden">
-             {isPending 
-               ? 'Your reservation request has been received and is pending approval.' 
-               : 'Thank you for choosing Mero-Booking. Your reservation is secured.'}
+             {isPaid 
+               ? `Payment via ${confirmedBooking.paymentMethod} successful. Your room is secured.` 
+               : 'Your reservation is received. Please pay upon arrival.'}
            </p>
 
            {/* Unique Confirmation Number Section */}
@@ -126,10 +134,15 @@ export const BookingSummary: React.FC = () => {
            <div className="bg-slate-50 rounded-2xl p-6 mb-8 text-left border border-slate-200 shadow-inner print:bg-white print:border-2 print:border-black">
              <div className="flex justify-between items-center border-b border-slate-200 pb-4 mb-4">
                <div>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border print:bg-transparent print:text-black print:border-black ${
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border print:bg-transparent print:text-black print:border-black mr-2 ${
                     isPending ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-green-100 text-green-800 border-green-200'
                   }`}>
-                    Status: {confirmedBooking.status}
+                    {confirmedBooking.status}
+                  </span>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border print:bg-transparent print:text-black print:border-black ${
+                    isPaid ? 'bg-green-100 text-green-800 border-green-200' : 'bg-gray-100 text-gray-800 border-gray-200'
+                  }`}>
+                    {isPaid ? 'PAID' : 'PAY ON ARRIVAL'}
                   </span>
                </div>
                <div className="text-right">
@@ -158,6 +171,10 @@ export const BookingSummary: React.FC = () => {
                 <div>
                    <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Duration</p>
                    <p className="font-medium text-gray-900">{nights} Nights</p>
+                </div>
+                <div>
+                   <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Payment Method</p>
+                   <p className="font-medium text-gray-900 uppercase">{confirmedBooking.paymentMethod}</p>
                 </div>
              </div>
 
@@ -217,18 +234,31 @@ export const BookingSummary: React.FC = () => {
   const taxes = baseCost * 0.13;
   const totalCost = Math.floor(baseCost + taxes);
 
-  const handleConfirm = async () => {
+  const processBooking = async () => {
     if (!user) return;
     
     setIsSubmitting(true);
+    
+    // Simulate Payment Gateway Delay
+    if (paymentMethod === 'ESEWA' || paymentMethod === 'KHALTI') {
+        setIsProcessingPayment(true);
+        // Simulate waiting for user to pay on external gateway
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        setIsProcessingPayment(false);
+    }
+
     try {
+      const isPaid = (paymentMethod === 'ESEWA' || paymentMethod === 'KHALTI');
       const newBooking = await createBooking({
         roomId: room.id,
         userId: user.id,
         guestName: user.name,
         checkIn,
         checkOut,
-        totalPrice: totalCost
+        totalPrice: totalCost,
+        paymentMethod,
+        paymentStatus: isPaid ? 'PAID' : 'PENDING',
+        status: isPaid ? 'CONFIRMED' : 'PENDING'
       });
       setConfirmedBooking(newBooking);
     } catch (error) {
@@ -238,7 +268,93 @@ export const BookingSummary: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 animate-fade-in">
+    <div className="min-h-screen bg-gray-50 py-12 px-4 animate-fade-in relative">
+      
+      {/* Payment Processing Overlay */}
+      {isProcessingPayment && (
+        <div className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center animate-fade-in">
+           <div className={`p-8 rounded-3xl flex flex-col items-center max-w-sm w-full text-center ${
+              paymentMethod === 'ESEWA' ? 'bg-[#60bb46]/5' : 'bg-[#5c2d91]/5'
+           }`}>
+             <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-xl ${
+                paymentMethod === 'ESEWA' ? 'bg-[#60bb46] text-white' : 'bg-[#5c2d91] text-white'
+             }`}>
+                {paymentMethod === 'ESEWA' ? (
+                   <div className="font-bold text-2xl tracking-tighter">eSewa</div>
+                ) : (
+                   <div className="font-bold text-xl tracking-tighter">Khalti</div>
+                )}
+             </div>
+             
+             <h2 className="text-2xl font-bold text-gray-900 mb-2">Processing Payment</h2>
+             <p className="text-gray-500 mb-8 text-sm">Please do not close this window...</p>
+             
+             <div className="w-full bg-gray-200 rounded-full h-2 mb-4 overflow-hidden">
+               <div className={`h-full rounded-full animate-[progress_2s_ease-in-out_infinite] ${
+                 paymentMethod === 'ESEWA' ? 'bg-[#60bb46]' : 'bg-[#5c2d91]'
+               }`} style={{width: '60%'}}></div>
+             </div>
+             
+             <div className="flex items-center gap-2 text-xs font-semibold text-gray-400 uppercase tracking-widest">
+               <ShieldCheck size={14} /> Secure Gateway
+             </div>
+           </div>
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {showConfirmModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-100 flex flex-col gap-4">
+                  <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-50 text-blue-600 rounded-full border border-blue-100">
+                          <AlertCircle size={24} />
+                      </div>
+                      <h3 className="text-xl font-bold text-gray-900">Confirm Booking</h3>
+                  </div>
+                  
+                  <div className="space-y-3 bg-gray-50 p-4 rounded-xl text-sm border border-gray-200">
+                      <div className="flex justify-between">
+                          <span className="text-gray-500">Room</span>
+                          <span className="font-medium text-gray-900">{room.name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                          <span className="text-gray-500">Guest</span>
+                          <span className="font-medium text-gray-900">{user?.name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                          <span className="text-gray-500">Dates</span>
+                          <span className="font-medium text-gray-900">{checkIn} — {checkOut}</span>
+                      </div>
+                      <div className="flex justify-between">
+                          <span className="text-gray-500">Payment Method</span>
+                          <span className="font-medium text-gray-900 uppercase flex items-center gap-1">
+                              {paymentMethod === 'CASH' && <Banknote size={14}/>}
+                              {paymentMethod}
+                          </span>
+                      </div>
+                      <div className="flex justify-between pt-3 border-t border-gray-200 mt-1">
+                          <span className="font-bold text-gray-700">Total</span>
+                          <span className="font-bold text-blue-600">NPR {totalCost.toLocaleString()}</span>
+                      </div>
+                  </div>
+                  
+                  <p className="text-xs text-gray-500 bg-blue-50/50 p-3 rounded-lg border border-blue-50">
+                      {paymentMethod === 'CASH' 
+                          ? 'By confirming, you agree to pay the total amount upon arrival at the hotel.' 
+                          : `You will be redirected to the ${paymentMethod === 'ESEWA' ? 'eSewa' : 'Khalti'} secure gateway to complete the transaction.`}
+                  </p>
+                  
+                  <div className="flex gap-3 mt-2">
+                      <Button variant="secondary" onClick={() => setShowConfirmModal(false)} className="flex-1">Cancel</Button>
+                      <Button onClick={() => { setShowConfirmModal(false); processBooking(); }} className="flex-1 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20">
+                          Confirm & {paymentMethod === 'CASH' ? 'Book' : 'Pay'}
+                      </Button>
+                  </div>
+              </div>
+          </div>
+      )}
+
       <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 flex flex-col md:flex-row">
         
         {/* Left Side - Image */}
@@ -265,6 +381,52 @@ export const BookingSummary: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900 mb-6">Confirm Reservation</h1>
 
           <div className="space-y-6 flex-1">
+            {/* Payment Method Selection */}
+            <div>
+               <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3">Select Payment Method</h3>
+               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button 
+                    onClick={() => setPaymentMethod('CASH')}
+                    className={`p-3 rounded-xl border-2 flex flex-col items-center justify-center gap-2 transition-all ${
+                        paymentMethod === 'CASH' 
+                        ? 'border-gray-800 bg-gray-50 text-gray-900' 
+                        : 'border-gray-100 bg-white text-gray-400 hover:border-gray-200'
+                    }`}
+                  >
+                    <Banknote size={24} />
+                    <span className="text-xs font-bold">Pay at Hotel</span>
+                  </button>
+
+                  <button 
+                    onClick={() => setPaymentMethod('ESEWA')}
+                    className={`p-3 rounded-xl border-2 flex flex-col items-center justify-center gap-2 transition-all ${
+                        paymentMethod === 'ESEWA' 
+                        ? 'border-[#60bb46] bg-[#60bb46]/5 text-[#60bb46]' 
+                        : 'border-gray-100 bg-white text-gray-400 hover:border-[#60bb46]/30'
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-[#60bb46] flex items-center justify-center text-white font-bold text-[10px]">
+                        eSewa
+                    </div>
+                    <span className="text-xs font-bold">eSewa Wallet</span>
+                  </button>
+
+                  <button 
+                    onClick={() => setPaymentMethod('KHALTI')}
+                    className={`p-3 rounded-xl border-2 flex flex-col items-center justify-center gap-2 transition-all ${
+                        paymentMethod === 'KHALTI' 
+                        ? 'border-[#5c2d91] bg-[#5c2d91]/5 text-[#5c2d91]' 
+                        : 'border-gray-100 bg-white text-gray-400 hover:border-[#5c2d91]/30'
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-[#5c2d91] flex items-center justify-center text-white font-bold text-[10px]">
+                        Khalti
+                    </div>
+                    <span className="text-xs font-bold">Khalti Wallet</span>
+                  </button>
+               </div>
+            </div>
+
             <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200 shadow-sm">
                <div className="flex justify-between items-center mb-5 pb-5 border-b border-gray-200">
                  <div className="flex items-center gap-3">
@@ -314,18 +476,29 @@ export const BookingSummary: React.FC = () => {
 
           <div className="mt-8 pt-6 border-t border-gray-100">
             <Button 
-              onClick={handleConfirm} 
+              onClick={() => setShowConfirmModal(true)} 
               disabled={isSubmitting}
-              className="w-full py-4 rounded-xl text-lg shadow-xl shadow-blue-600/20 hover:shadow-blue-600/30 transition-all transform active:scale-[0.99]"
+              className={`w-full py-4 rounded-xl text-lg shadow-xl transition-all transform active:scale-[0.99] ${
+                  paymentMethod === 'ESEWA' ? 'bg-[#60bb46] hover:bg-[#4ea835] shadow-[#60bb46]/20' :
+                  paymentMethod === 'KHALTI' ? 'bg-[#5c2d91] hover:bg-[#482075] shadow-[#5c2d91]/20' :
+                  'shadow-blue-600/20'
+              }`}
             >
               {isSubmitting ? (
-                <span className="flex items-center gap-2"><Loader2 className="animate-spin" /> Processing...</span>
+                 isProcessingPayment ? (
+                     <span className="flex items-center gap-2"><Loader2 className="animate-spin" /> Processing Payment...</span>
+                 ) : (
+                     <span className="flex items-center gap-2"><Loader2 className="animate-spin" /> Creating Booking...</span>
+                 )
               ) : (
-                <span className="flex items-center gap-2">Confirm & Pay <CheckCircle size={20} /></span>
+                <span className="flex items-center gap-2">
+                   {paymentMethod === 'CASH' ? 'Confirm Booking' : `Pay with ${paymentMethod === 'ESEWA' ? 'eSewa' : 'Khalti'}`}
+                   <CheckCircle size={20} />
+                </span>
               )}
             </Button>
             <p className="text-center text-[10px] text-gray-400 mt-4 uppercase tracking-wide">
-              Secure Booking • Instant Confirmation
+              {paymentMethod === 'CASH' ? 'Pay upon arrival at the hotel front desk.' : 'Secure Digital Payment • Instant Confirmation'}
             </p>
           </div>
         </div>

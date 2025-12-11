@@ -41,9 +41,10 @@ export const Login: React.FC = () => {
     // 1. If user was redirected here (e.g. from /book), send them back there.
     // 2. If Admin, send to Dashboard.
     // 3. Otherwise, send to Home.
-    const state = location.state as { from?: Location } | null;
-    const from = state?.from?.pathname ? state.from.pathname + (state.from.search || '') : 
-                 (role === 'ADMIN' || role === 'SUPER_ADMIN' ? '/admin' : '/');
+    const state = location.state as { from?: { pathname: string, search?: string } } | null;
+    const from = state?.from?.pathname 
+      ? state.from.pathname + (state.from.search || '')
+      : (role === 'ADMIN' || role === 'SUPER_ADMIN' ? '/admin' : '/');
     
     navigate(from, { replace: true });
   };
