@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { getBookings, updateBookingStatus } from '../../services/mockDb';
 import { Booking, BookingStatus, PaymentMethod } from '../../types';
+import { useToast } from '../../context/ToastContext';
 import { Check, X, Loader2, Filter, Copy, Search, CreditCard, RefreshCw } from 'lucide-react';
 
 export const Bookings: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -19,19 +21,31 @@ export const Bookings: React.FC = () => {
 
   const loadData = async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
-    setBookings(await getBookings());
-    if (showLoading) setIsLoading(false);
+    try {
+      setBookings(await getBookings());
+    } catch (error) {
+      showToast('error', 'Failed to load bookings.');
+    } finally {
+      if (showLoading) setIsLoading(false);
+    }
   };
 
   const handleStatusChange = async (id: string, status: Booking['status']) => {
     setProcessingId(id);
-    await updateBookingStatus(id, status);
-    await loadData(false); // Refresh in background
-    setProcessingId(null);
+    try {
+      await updateBookingStatus(id, status);
+      await loadData(false); // Refresh in background
+      showToast('success', `Booking status updated to ${status}.`);
+    } catch (error) {
+      showToast('error', 'Failed to update booking status.');
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   const handleCopyId = (id: string) => {
     navigator.clipboard.writeText(id);
+    showToast('success', 'Booking ID copied to clipboard.');
   };
 
   // Filter Logic

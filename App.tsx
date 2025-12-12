@@ -1,6 +1,7 @@
 import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import { Login } from './pages/public/Login';
 import { Register } from './pages/public/Register';
 import { Home } from './pages/public/Home';
@@ -103,55 +104,57 @@ const PublicNav = () => {
 
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          
-          <Route path="/" element={<LayoutWithChat><Home /></LayoutWithChat>} />
-          
-          <Route path="/book" element={
-            <ProtectedRoute>
-              <LayoutWithChat>
-                <BookingSummary />
-              </LayoutWithChat>
-            </ProtectedRoute>
-          } />
+    <ToastProvider>
+      <AuthProvider>
+        <Router>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            
+            <Route path="/" element={<LayoutWithChat><Home /></LayoutWithChat>} />
+            
+            <Route path="/book" element={
+              <ProtectedRoute>
+                <LayoutWithChat>
+                  <BookingSummary />
+                </LayoutWithChat>
+              </ProtectedRoute>
+            } />
 
-          <Route path="/my-bookings" element={
-            <ProtectedRoute>
-              <LayoutWithChat>
-                <MyBookings />
-              </LayoutWithChat>
-            </ProtectedRoute>
-          } />
+            <Route path="/my-bookings" element={
+              <ProtectedRoute>
+                <LayoutWithChat>
+                  <MyBookings />
+                </LayoutWithChat>
+              </ProtectedRoute>
+            } />
 
-          {/* Admin Routes */}
-          <Route path="/admin/*" element={
-            <ProtectedRoute requiredRole="ADMIN">
-              <AdminLayout>
-                <Routes>
-                  <Route index element={<Dashboard />} />
-                  <Route path="rooms" element={<Rooms />} />
-                  <Route path="facilities" element={<Facilities />} />
-                  <Route path="bookings" element={<Bookings />} />
-                  <Route path="users" element={
-                    <ProtectedRoute requiredRole="SUPER_ADMIN">
-                      <Users />
-                    </ProtectedRoute>
-                  } />
-                </Routes>
-              </AdminLayout>
-            </ProtectedRoute>
-          } />
+            {/* Admin Routes */}
+            <Route path="/admin/*" element={
+              <ProtectedRoute requiredRole="ADMIN">
+                <AdminLayout>
+                  <Routes>
+                    <Route index element={<Dashboard />} />
+                    <Route path="rooms" element={<Rooms />} />
+                    <Route path="facilities" element={<Facilities />} />
+                    <Route path="bookings" element={<Bookings />} />
+                    <Route path="users" element={
+                      <ProtectedRoute requiredRole="SUPER_ADMIN">
+                        <Users />
+                      </ProtectedRoute>
+                    } />
+                  </Routes>
+                </AdminLayout>
+              </ProtectedRoute>
+            } />
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Router>
-    </AuthProvider>
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Router>
+      </AuthProvider>
+    </ToastProvider>
   );
 };
 

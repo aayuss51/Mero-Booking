@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '../../components/Button';
 import { Lock, Mail, User as UserIcon, Loader2, ArrowRight } from 'lucide-react';
 
 export const Register: React.FC = () => {
   const { register } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   
   const [name, setName] = useState('');
@@ -31,15 +33,20 @@ export const Register: React.FC = () => {
 
     setIsLoading(true);
     
-    // Simulate network request for realism
-    await new Promise(resolve => setTimeout(resolve, 800));
+    try {
+      // Simulate network request for realism
+      await new Promise(resolve => setTimeout(resolve, 800));
 
-    // Register as GUEST using AuthContext
-    // The AuthContext handles generating the user ID and saving to localStorage
-    register(name, email, 'GUEST');
-    
-    setIsLoading(false);
-    navigate('/', { replace: true });
+      // Register as GUEST using AuthContext
+      register(name, email, 'GUEST');
+      
+      showToast('success', 'Account created successfully! Welcome to Mero-Booking.');
+      navigate('/', { replace: true });
+    } catch (e) {
+      showToast('error', 'Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

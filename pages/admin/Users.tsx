@@ -3,9 +3,11 @@ import { getUsers, updateUserRole } from '../../services/mockDb';
 import { User, UserRole } from '../../types';
 import { Loader2, Shield, User as UserIcon, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 
 export const Users: React.FC = () => {
   const { user: currentUser } = useAuth();
+  const { showToast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -16,17 +18,27 @@ export const Users: React.FC = () => {
 
   const loadData = async () => {
     setIsLoading(true);
-    const data = await getUsers();
-    setUsers(data);
+    try {
+        const data = await getUsers();
+        setUsers(data);
+    } catch (error) {
+        showToast('error', 'Failed to load users.');
+    }
     setIsLoading(false);
   };
 
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
     setProcessingId(userId);
-    await updateUserRole(userId, newRole);
-    // Optimistic update
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
-    setProcessingId(null);
+    try {
+        await updateUserRole(userId, newRole);
+        // Optimistic update
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+        showToast('success', `User role updated to ${newRole.replace('_', ' ')}.`);
+    } catch (error) {
+        showToast('error', 'Failed to update user role.');
+    } finally {
+        setProcessingId(null);
+    }
   };
 
   if (isLoading) {

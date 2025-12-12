@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import { getUserBookings, getRooms, updateBookingStatus, updateBookingDetails } from '../../services/mockDb';
 import { Booking, RoomType } from '../../types';
 import { Calendar, BedDouble, CheckCircle, Clock, XCircle, RefreshCw, CheckCheck, History, AlertTriangle, Loader2, Pencil, LogOut, ArrowRight } from 'lucide-react';
@@ -224,6 +225,7 @@ const BookingCard: React.FC<BookingCardProps> = ({
 
 export const MyBookings: React.FC = () => {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [rooms, setRooms] = useState<RoomType[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -256,16 +258,21 @@ export const MyBookings: React.FC = () => {
   const fetchData = async (showGlobalLoading = true) => {
     if (user) {
       if (showGlobalLoading) setIsLoading(true);
-      const [userBookings, allRooms, allReviews] = await Promise.all([
-        getUserBookings(user.id),
-        getRooms(),
-        getReviews()
-      ]);
-      // Sort by created date descending
-      setBookings(userBookings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-      setRooms(allRooms);
-      setReviews(allReviews);
-      if (showGlobalLoading) setIsLoading(false);
+      try {
+        const [userBookings, allRooms, allReviews] = await Promise.all([
+          getUserBookings(user.id),
+          getRooms(),
+          getReviews()
+        ]);
+        // Sort by created date descending
+        setBookings(userBookings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        setRooms(allRooms);
+        setReviews(allReviews);
+      } catch (error) {
+        showToast('error', 'Failed to load your bookings.');
+      } finally {
+        if (showGlobalLoading) setIsLoading(false);
+      }
     }
   };
 
@@ -281,11 +288,17 @@ export const MyBookings: React.FC = () => {
   const handleConfirmCancel = async () => {
     if (bookingToCancel) {
       setIsProcessingCancel(true);
-      await updateBookingStatus(bookingToCancel, 'CANCELLED');
-      await fetchData(false);
-      setIsProcessingCancel(false);
-      setIsCancelModalOpen(false);
-      setBookingToCancel(null);
+      try {
+        await updateBookingStatus(bookingToCancel, 'CANCELLED');
+        await fetchData(false);
+        showToast('success', 'Booking cancelled successfully.');
+      } catch (error) {
+        showToast('error', 'Failed to cancel booking. Please try again.');
+      } finally {
+        setIsProcessingCancel(false);
+        setIsCancelModalOpen(false);
+        setBookingToCancel(null);
+      }
     }
   };
 
@@ -298,21 +311,27 @@ export const MyBookings: React.FC = () => {
     if (bookingToCheckout) {
       setIsProcessingCheckout(true);
       
-      // Capture the booking object before it's moved to history/updated
-      const booking = bookings.find(b => b.id === bookingToCheckout);
-      
-      await updateBookingStatus(bookingToCheckout, 'COMPLETED');
-      await fetchData(false);
-      
-      setIsProcessingCheckout(false);
-      setIsCheckoutModalOpen(false);
-      setBookingToCheckout(null);
+      try {
+        // Capture the booking object before it's moved to history/updated
+        const booking = bookings.find(b => b.id === bookingToCheckout);
+        
+        await updateBookingStatus(bookingToCheckout, 'COMPLETED');
+        await fetchData(false);
+        
+        showToast('success', 'Checked out successfully. We hope you enjoyed your stay!');
 
-      // Automatically navigate to Review Page (Modal) after successful checkout
-      if (booking) {
-         setSelectedBookingForReview({ ...booking, status: 'COMPLETED' });
-         setUserReviewForBooking(undefined);
-         setIsReviewModalOpen(true);
+        // Automatically navigate to Review Page (Modal) after successful checkout
+        if (booking) {
+           setSelectedBookingForReview({ ...booking, status: 'COMPLETED' });
+           setUserReviewForBooking(undefined);
+           setIsReviewModalOpen(true);
+        }
+      } catch (error) {
+        showToast('error', 'Checkout failed. Please contact the front desk.');
+      } finally {
+        setIsProcessingCheckout(false);
+        setIsCheckoutModalOpen(false);
+        setBookingToCheckout(null);
       }
     }
   };
@@ -327,8 +346,13 @@ export const MyBookings: React.FC = () => {
 
   const handleEditSave = async (checkIn: string, checkOut: string) => {
     if (selectedBookingForEdit) {
-      await updateBookingDetails(selectedBookingForEdit.booking.id, { checkIn, checkOut });
-      await fetchData(false);
+      try {
+        await updateBookingDetails(selectedBookingForEdit.booking.id, { checkIn, checkOut });
+        await fetchData(false);
+        showToast('success', 'Booking details updated successfully.');
+      } catch (error) {
+        showToast('error', 'Failed to update booking dates.');
+      }
     }
   };
 
@@ -362,16 +386,21 @@ export const MyBookings: React.FC = () => {
     if (!dateUpdateData) return;
     setIsProcessingDateUpdate(true);
     
-    // Retrieve current checkIn from booking list to be safe
-    const booking = bookings.find(b => b.id === dateUpdateData.id);
-    if (booking) {
-        await updateBookingDetails(dateUpdateData.id, { checkIn: booking.checkIn, checkOut: dateUpdateData.newDate });
-        await fetchData(false);
+    try {
+      // Retrieve current checkIn from booking list to be safe
+      const booking = bookings.find(b => b.id === dateUpdateData.id);
+      if (booking) {
+          await updateBookingDetails(dateUpdateData.id, { checkIn: booking.checkIn, checkOut: dateUpdateData.newDate });
+          await fetchData(false);
+          showToast('success', 'Check-out date updated.');
+      }
+    } catch (error) {
+      showToast('error', 'Failed to update check-out date.');
+    } finally {
+      setIsProcessingDateUpdate(false);
+      setIsDateUpdateModalOpen(false);
+      setDateUpdateData(null);
     }
-    
-    setIsProcessingDateUpdate(false);
-    setIsDateUpdateModalOpen(false);
-    setDateUpdateData(null);
   };
   // --------------------------------------------------
 
@@ -385,24 +414,30 @@ export const MyBookings: React.FC = () => {
   const handleSaveReview = async (rating: number, comment: string) => {
     if (!user || !selectedBookingForReview) return;
     
-    await saveReview({
-      id: userReviewForBooking?.id || '', // Empty ID tells service to create new
-      bookingId: selectedBookingForReview.id,
-      roomId: selectedBookingForReview.roomId,
-      userId: user.id,
-      userName: user.name,
-      rating,
-      comment,
-      createdAt: new Date().toISOString()
-    });
-    
-    // Refresh data
-    const updatedReviews = await getReviews();
-    setReviews(updatedReviews);
+    try {
+      await saveReview({
+        id: userReviewForBooking?.id || '', // Empty ID tells service to create new
+        bookingId: selectedBookingForReview.id,
+        roomId: selectedBookingForReview.roomId,
+        userId: user.id,
+        userName: user.name,
+        rating,
+        comment,
+        createdAt: new Date().toISOString()
+      });
+      
+      // Refresh data
+      const updatedReviews = await getReviews();
+      setReviews(updatedReviews);
+      showToast('success', 'Thank you! Your review has been submitted.');
+    } catch (error) {
+      showToast('error', 'Failed to submit review.');
+    }
   };
 
   const handleRefresh = () => {
     fetchData(true);
+    showToast('info', 'Refreshed booking data.');
   };
 
   const checkReviewEligibility = (booking: Booking) => {

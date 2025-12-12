@@ -16,9 +16,13 @@ export const ConciergeChat: React.FC = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const f = await getFacilities();
-      const r = await getRooms();
-      setData({ facilities: f, rooms: r });
+      try {
+        const f = await getFacilities();
+        const r = await getRooms();
+        setData({ facilities: f, rooms: r });
+      } catch (e) {
+        console.error("Chat failed to load hotel data");
+      }
     };
     fetchData();
   }, []);
@@ -30,11 +34,19 @@ export const ConciergeChat: React.FC = () => {
   useEffect(scrollToBottom, [messages]);
 
   const handleSend = async () => {
-    if (!input.trim() || !data) return;
+    if (!input.trim()) return;
 
     const userMsg = input;
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setInput('');
+    
+    if (!data) {
+        setTimeout(() => {
+            setMessages(prev => [...prev, { role: 'ai', text: "I'm having trouble connecting to the hotel database right now. Please contact the front desk directly for assistance." }]);
+        }, 600);
+        return;
+    }
+
     setIsLoading(true);
 
     const response = await getConciergeResponse(userMsg, data.facilities, data.rooms);

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getFacilities, saveFacility, deleteFacility } from '../../services/mockDb';
 import { Facility } from '../../types';
 import { Button } from '../../components/Button';
+import { useToast } from '../../context/ToastContext';
 import { Plus, Trash2, Edit2, Wifi, Car, Coffee, Dumbbell, Waves, Utensils, Tv, Loader2 } from 'lucide-react';
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -14,6 +15,7 @@ export const Facilities: React.FC = () => {
   const [currentFacility, setCurrentFacility] = useState<Partial<Facility>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     loadData(true);
@@ -21,26 +23,42 @@ export const Facilities: React.FC = () => {
 
   const loadData = async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
-    setFacilities(await getFacilities());
-    if (showLoading) setIsLoading(false);
+    try {
+      setFacilities(await getFacilities());
+    } catch (error) {
+      showToast('error', 'Failed to load facilities.');
+    } finally {
+      if (showLoading) setIsLoading(false);
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (currentFacility.name && currentFacility.icon) {
       setIsSubmitting(true);
-      await saveFacility(currentFacility as Facility);
-      await loadData(false); // Background refresh
-      setIsSubmitting(false);
-      setIsEditing(false);
-      setCurrentFacility({});
+      try {
+        await saveFacility(currentFacility as Facility);
+        await loadData(false); // Background refresh
+        showToast('success', `Facility "${currentFacility.name}" saved successfully.`);
+        setIsEditing(false);
+        setCurrentFacility({});
+      } catch (error) {
+        showToast('error', 'Failed to save facility.');
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Delete this facility?')) {
-      await deleteFacility(id);
-      loadData(false);
+      try {
+        await deleteFacility(id);
+        await loadData(false);
+        showToast('success', 'Facility deleted successfully.');
+      } catch (error) {
+        showToast('error', 'Failed to delete facility.');
+      }
     }
   };
 

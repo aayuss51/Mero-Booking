@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getRooms, saveRoom, deleteRoom, getFacilities, getBookings } from '../../services/mockDb';
 import { RoomType, Facility, Booking } from '../../types';
 import { Button } from '../../components/Button';
+import { useToast } from '../../context/ToastContext';
 import { ImageWithSkeleton } from '../../components/ImageWithSkeleton';
 import { Plus, Trash2, Edit2, Users, DollarSign, Loader2, Image as ImageIcon, Calendar as CalendarIcon, ChevronLeft, ChevronRight, X, Upload, Info } from 'lucide-react';
 
@@ -13,6 +14,7 @@ export const Rooms: React.FC = () => {
   const [currentRoom, setCurrentRoom] = useState<Partial<RoomType>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showToast } = useToast();
 
   // Calendar State
   const [calendarRoom, setCalendarRoom] = useState<RoomType | null>(null);
@@ -24,11 +26,16 @@ export const Rooms: React.FC = () => {
 
   const loadData = async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
-    const [r, f, b] = await Promise.all([getRooms(), getFacilities(), getBookings()]);
-    setRooms(r);
-    setFacilities(f);
-    setBookings(b);
-    if (showLoading) setIsLoading(false);
+    try {
+      const [r, f, b] = await Promise.all([getRooms(), getFacilities(), getBookings()]);
+      setRooms(r);
+      setFacilities(f);
+      setBookings(b);
+    } catch (error) {
+      showToast('error', 'Failed to load rooms data.');
+    } finally {
+      if (showLoading) setIsLoading(false);
+    }
   };
 
   const handleEdit = (room: RoomType) => {
@@ -48,12 +55,29 @@ export const Rooms: React.FC = () => {
         imageUrl: currentRoom.imageUrl ? currentRoom.imageUrl : `https://picsum.photos/800/600?random=${Math.random()}`
       } as RoomType;
 
-      await saveRoom(roomToSave);
-      
-      await loadData(false); // Background refresh
-      setIsSubmitting(false);
-      setIsEditing(false);
-      setCurrentRoom({});
+      try {
+        await saveRoom(roomToSave);
+        await loadData(false); // Background refresh
+        showToast('success', `Room "${roomToSave.name}" saved successfully.`);
+        setIsEditing(false);
+        setCurrentRoom({});
+      } catch (error) {
+        showToast('error', 'Failed to save room.');
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+  };
+
+  const handleDelete = async (room: RoomType) => {
+    if (window.confirm(`Delete "${room.name}"? This action cannot be undone.`)) {
+       try {
+         await deleteRoom(room.id);
+         await loadData(false);
+         showToast('success', 'Room deleted successfully.');
+       } catch (error) {
+         showToast('error', 'Failed to delete room.');
+       }
     }
   };
 
@@ -115,7 +139,7 @@ export const Rooms: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex flex-col justify-center items-center h-96 gap-4">
-        <Loader2 className="animate-spin text-blue-600" size={48} />
+        <Loader2 className="animate-spin text-emerald-600" size={48} />
         <p className="text-gray-500 font-medium animate-pulse">Loading rooms...</p>
       </div>
     );
@@ -132,34 +156,34 @@ export const Rooms: React.FC = () => {
 
       {isEditing && (
         <div className="bg-white p-6 rounded-lg shadow-md mb-8 border border-gray-200">
-          <h3 className="text-lg font-semibold mb-4">{currentRoom.id ? 'Edit' : 'Add'} Room</h3>
+          <h3 className="text-lg font-semibold mb-4 text-gray-900">{currentRoom.id ? 'Edit' : 'Add'} Room</h3>
           <form onSubmit={handleSave} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Room Name</label>
-                <input type="text" className="w-full border rounded p-2" value={currentRoom.name || ''} onChange={e => setCurrentRoom({...currentRoom, name: e.target.value})} required />
+                <label className="block text-sm font-medium mb-1 text-gray-700">Room Name</label>
+                <input type="text" className="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 outline-none" value={currentRoom.name || ''} onChange={e => setCurrentRoom({...currentRoom, name: e.target.value})} required />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Price/Night (NPR)</label>
-                <input type="number" className="w-full border rounded p-2" value={currentRoom.pricePerNight || ''} onChange={e => setCurrentRoom({...currentRoom, pricePerNight: Number(e.target.value)})} required />
+                <label className="block text-sm font-medium mb-1 text-gray-700">Price/Night (NPR)</label>
+                <input type="number" className="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 outline-none" value={currentRoom.pricePerNight || ''} onChange={e => setCurrentRoom({...currentRoom, pricePerNight: Number(e.target.value)})} required />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Capacity (People)</label>
-                <input type="number" className="w-full border rounded p-2" value={currentRoom.capacity || ''} onChange={e => setCurrentRoom({...currentRoom, capacity: Number(e.target.value)})} required />
+                <label className="block text-sm font-medium mb-1 text-gray-700">Capacity (People)</label>
+                <input type="number" className="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 outline-none" value={currentRoom.capacity || ''} onChange={e => setCurrentRoom({...currentRoom, capacity: Number(e.target.value)})} required />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Total Stock</label>
-                <input type="number" className="w-full border rounded p-2" value={currentRoom.totalStock || ''} onChange={e => setCurrentRoom({...currentRoom, totalStock: Number(e.target.value)})} required />
+                <label className="block text-sm font-medium mb-1 text-gray-700">Total Stock</label>
+                <input type="number" className="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 outline-none" value={currentRoom.totalStock || ''} onChange={e => setCurrentRoom({...currentRoom, totalStock: Number(e.target.value)})} required />
               </div>
               
               {/* Description Field - Full Width */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium mb-1">
+                <label className="block text-sm font-medium mb-1 text-gray-700">
                   Description 
                   <span className="text-gray-400 font-normal ml-1 text-xs">(Visible to guests)</span>
                 </label>
                 <textarea 
-                  className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-y min-h-[100px]" 
+                  className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-emerald-500 focus:outline-none resize-y min-h-[100px]" 
                   rows={4}
                   value={currentRoom.description || ''} 
                   onChange={e => setCurrentRoom({...currentRoom, description: e.target.value})} 
@@ -170,14 +194,14 @@ export const Rooms: React.FC = () => {
               
               {/* Image Input Section */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium mb-1">Room Image</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700">Room Image</label>
                 <div className="space-y-3">
                   {/* URL Input */}
                   <div className="relative">
                     <ImageIcon className="absolute left-3 top-2.5 text-gray-400" size={16} />
                     <input 
                       type="text" 
-                      className="w-full border rounded p-2 pl-9 text-sm text-gray-600" 
+                      className="w-full border rounded-lg p-2 pl-9 text-sm text-gray-600 focus:ring-2 focus:ring-emerald-500 outline-none" 
                       placeholder="Paste image URL..."
                       value={currentRoom.imageUrl?.startsWith('data:') ? '' : (currentRoom.imageUrl || '')} 
                       onChange={e => setCurrentRoom({...currentRoom, imageUrl: e.target.value})} 
@@ -228,17 +252,17 @@ export const Rooms: React.FC = () => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-2">Facilities</label>
+              <label className="block text-sm font-medium mb-2 text-gray-700">Facilities</label>
               <div className="flex flex-wrap gap-2">
                 {facilities.map(f => (
                   <button
                     key={f.id}
                     type="button"
                     onClick={() => toggleFacility(f.id)}
-                    className={`px-3 py-1 rounded-full text-sm border ${
+                    className={`px-3 py-1 rounded-full text-sm border transition-colors ${
                       (currentRoom.facilityIds || []).includes(f.id) 
-                      ? 'bg-blue-100 border-blue-200 text-blue-700' 
-                      : 'bg-white border-gray-200 text-gray-600'
+                      ? 'bg-emerald-100 border-emerald-200 text-emerald-700' 
+                      : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                     }`}
                   >
                     {f.name}
@@ -262,14 +286,14 @@ export const Rooms: React.FC = () => {
           const activeBookings = getActiveBookings(room.id);
           
           return (
-            <div key={room.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-lg transition-shadow">
+            <div key={room.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-lg transition-shadow duration-300">
               <div className="h-48 overflow-hidden relative group bg-gray-100">
                 <ImageWithSkeleton src={room.imageUrl} alt={room.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                 
                 {/* Active Booking Info Badge */}
                 {activeBookings.length > 0 && (
                   <div className="absolute top-2 left-2 z-20 group/info">
-                    <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full text-blue-600 shadow-sm cursor-help hover:bg-white transition-colors border border-blue-100">
+                    <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full text-emerald-600 shadow-sm cursor-help hover:bg-white transition-colors border border-emerald-100">
                       <Info size={16} />
                     </div>
                     {/* Custom Tooltip */}
@@ -279,8 +303,8 @@ export const Rooms: React.FC = () => {
                       </p>
                       <div className="space-y-2 max-h-32 overflow-y-auto custom-scrollbar">
                         {activeBookings.map((b, idx) => (
-                          <div key={b.id} className={`pl-2 ${idx === 0 ? 'border-l-2 border-blue-500' : 'border-l-2 border-gray-600'}`}>
-                            <p className={`font-mono font-bold ${idx === 0 ? 'text-blue-200' : 'text-gray-400'}`}>#{b.id}</p>
+                          <div key={b.id} className={`pl-2 ${idx === 0 ? 'border-l-2 border-emerald-500' : 'border-l-2 border-gray-600'}`}>
+                            <p className={`font-mono font-bold ${idx === 0 ? 'text-emerald-200' : 'text-gray-400'}`}>#{b.id}</p>
                             <p className="truncate text-gray-300">{b.guestName}</p>
                           </div>
                         ))}
@@ -290,18 +314,24 @@ export const Rooms: React.FC = () => {
                 )}
 
                 <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                   <button onClick={() => handleEdit(room)} className="p-2 bg-white/90 rounded-full hover:text-blue-600 shadow-sm transition-colors"><Edit2 size={16} /></button>
-                   <button onClick={async () => { if(window.confirm('Delete?')) { await deleteRoom(room.id); loadData(false); }}} className="p-2 bg-white/90 rounded-full hover:text-red-600 shadow-sm transition-colors"><Trash2 size={16} /></button>
+                   <button onClick={() => handleEdit(room)} className="p-2 bg-white/90 rounded-full hover:text-emerald-600 shadow-sm transition-colors"><Edit2 size={16} /></button>
+                   <button onClick={() => handleDelete(room)} className="p-2 bg-white/90 rounded-full hover:text-red-600 shadow-sm transition-colors"><Trash2 size={16} /></button>
                 </div>
               </div>
+              
               <div className="p-5 flex-1 flex flex-col">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-bold text-lg">{room.name}</h3>
-                  <span className="font-semibold text-blue-600">NPR {room.pricePerNight.toLocaleString()}</span>
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="font-bold text-lg text-gray-900 leading-tight">{room.name}</h3>
+                  <div className="text-right shrink-0 ml-2">
+                    <span className="font-bold text-emerald-600 block">NPR {room.pricePerNight.toLocaleString()}</span>
+                  </div>
                 </div>
-                <p className="text-gray-500 text-sm mb-4 flex-1 line-clamp-3" title={room.description}>{room.description}</p>
+
+                <p className="text-gray-600 text-sm mb-4 flex-1 leading-relaxed line-clamp-3" title={room.description}>
+                  {room.description}
+                </p>
                 
-                <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                <div className="flex items-center gap-4 text-sm text-gray-500 mb-4 mt-auto">
                   <span className="flex items-center gap-1"><Users size={16} /> {room.capacity} Guests</span>
                   <span className="flex items-center gap-1"><DollarSign size={16} /> {room.totalStock} Available</span>
                 </div>
@@ -309,14 +339,14 @@ export const Rooms: React.FC = () => {
                 <div className="flex flex-wrap gap-1 mb-4">
                   {room.facilityIds.map(fid => {
                      const fac = facilities.find(f => f.id === fid);
-                     return fac ? <span key={fid} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">{fac.name}</span> : null;
+                     return fac ? <span key={fid} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded border border-gray-100">{fac.name}</span> : null;
                   })}
                 </div>
 
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="w-full mt-auto flex items-center justify-center gap-2 border-blue-200 text-blue-600 hover:bg-blue-50"
+                  className="w-full mt-auto flex items-center justify-center gap-2 border-emerald-200 text-emerald-600 hover:bg-emerald-50"
                   onClick={() => setCalendarRoom(room)}
                 >
                   <CalendarIcon size={16} /> View Availability
@@ -388,7 +418,7 @@ export const Rooms: React.FC = () => {
                               : 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 hover:scale-110 hover:shadow-md hover:z-10')
                           : 'bg-green-50 text-green-700 border border-green-100 hover:bg-green-100 hover:scale-105 hover:shadow-sm hover:z-10'
                         }
-                        ${isToday ? 'ring-2 ring-blue-500 ring-offset-1' : ''}
+                        ${isToday ? 'ring-2 ring-emerald-500 ring-offset-1' : ''}
                       `}
                       title={isBooked 
                         ? `Booking ID: #${booking?.id}\nGuest: ${booking?.guestName}\nStatus: ${isPending ? 'Pending (Awaiting Approval)' : 'Confirmed'}` 

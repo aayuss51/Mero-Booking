@@ -40,7 +40,7 @@ export const RoomDetailsModal: React.FC<RoomDetailsModalProps> = ({ isOpen, onCl
            </div>
 
            <div className="absolute bottom-6 right-6 bg-white/90 backdrop-blur px-4 py-2 rounded-xl border border-white/50 shadow-lg">
-             <span className="text-xl font-bold text-blue-900">NPR {room.pricePerNight.toLocaleString()}</span>
+             <span className="text-xl font-bold text-emerald-900">NPR {room.pricePerNight.toLocaleString()}</span>
              <span className="text-xs text-gray-500 font-medium"> / night</span>
            </div>
         </div>
@@ -48,26 +48,28 @@ export const RoomDetailsModal: React.FC<RoomDetailsModalProps> = ({ isOpen, onCl
         {/* Scrollable Content */}
         <div className="p-8 overflow-y-auto custom-scrollbar flex-1 bg-white">
           <div className="space-y-8">
-            {/* Description Section */}
-            <div>
+            {/* About this Room / Description Section */}
+            <div className="bg-emerald-50/50 p-6 rounded-2xl border border-emerald-100/50">
               <div className="flex items-center gap-2 mb-3">
-                 <Info size={18} className="text-blue-600" />
+                 <div className="p-1.5 bg-emerald-100 rounded-lg text-emerald-600">
+                    <Info size={18} />
+                 </div>
                  <h3 className="font-bold text-gray-800 uppercase tracking-wider text-xs">About this Room</h3>
               </div>
-              <p className="text-gray-600 leading-relaxed text-lg font-light border-l-4 border-blue-100 pl-4 py-1">
+              <p className="text-gray-700 leading-relaxed text-base font-light">
                 {room.description}
               </p>
             </div>
 
             {/* Facilities Section */}
             <div>
-              <h3 className="font-bold text-gray-800 uppercase tracking-wider text-xs mb-4">Room Amenities</h3>
+              <h3 className="font-bold text-gray-800 uppercase tracking-wider text-xs mb-4 ml-1">Room Amenities</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {room.facilityIds.map(fid => {
                   const f = facilities.find(fac => fac.id === fid);
                   return f ? (
-                    <div key={fid} className="flex items-center gap-2 text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-100 hover:border-blue-200 transition-colors">
-                      <Check size={16} className="text-green-500 shrink-0" />
+                    <div key={fid} className="flex items-center gap-2 text-gray-700 bg-gray-50 p-3 rounded-xl border border-gray-100 hover:border-emerald-200 hover:bg-white hover:shadow-sm transition-all">
+                      <Check size={16} className="text-emerald-500 shrink-0" />
                       <span className="text-sm font-medium">{f.name}</span>
                     </div>
                   ) : null;
@@ -82,8 +84,8 @@ export const RoomDetailsModal: React.FC<RoomDetailsModalProps> = ({ isOpen, onCl
           <Button variant="secondary" onClick={onClose} className="flex-1 bg-white border-gray-200 hover:bg-gray-100">
             Close Details
           </Button>
-          <Button onClick={() => onBook(room)} className="flex-1 shadow-lg shadow-blue-600/20 text-base">
-            Book Now
+          <Button onClick={() => onBook(room)} className="flex-1 shadow-lg shadow-emerald-600/20 text-base">
+            Book this Room
           </Button>
         </div>
       </div>

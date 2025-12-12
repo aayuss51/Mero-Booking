@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { getRoom, createBooking, getFacilities } from '../../services/mockDb';
 import { RoomType, Facility, Booking, PaymentMethod } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import { Button } from '../../components/Button';
 import { ImageWithSkeleton } from '../../components/ImageWithSkeleton';
 import { Calendar, Users, ArrowLeft, CheckCircle, Loader2, FileText, Printer, Clock, Share2, Copy, Check, Banknote, ShieldCheck, AlertCircle } from 'lucide-react';
@@ -10,6 +11,7 @@ import { Calendar, Users, ArrowLeft, CheckCircle, Loader2, FileText, Printer, Cl
 export const BookingSummary: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const searchParams = new URLSearchParams(location.search);
   const { user } = useAuth();
   
@@ -34,14 +36,22 @@ export const BookingSummary: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       if (roomId) {
-        const [r, f] = await Promise.all([getRoom(roomId), getFacilities()]);
-        if (r) setRoom(r);
-        setFacilities(f);
+        try {
+          const [r, f] = await Promise.all([getRoom(roomId), getFacilities()]);
+          if (r) {
+             setRoom(r);
+          } else {
+             showToast('error', 'Room details could not be loaded.');
+          }
+          setFacilities(f);
+        } catch (error) {
+           showToast('error', 'Failed to load booking details.');
+        }
       }
       setIsLoading(false);
     };
     fetchData();
-  }, [roomId]);
+  }, [roomId, showToast]);
 
   const handleShare = async () => {
     if (!confirmedBooking || !room) return;
@@ -57,7 +67,7 @@ export const BookingSummary: React.FC = () => {
         await navigator.share(shareData);
       } else {
         await navigator.clipboard.writeText(shareData.text);
-        alert('Booking details copied to clipboard!');
+        showToast('success', 'Booking details copied to clipboard!');
       }
     } catch (err) {
       console.error('Error sharing:', err);
@@ -69,6 +79,7 @@ export const BookingSummary: React.FC = () => {
       try {
         await navigator.clipboard.writeText(confirmedBooking.id);
         setIsCopied(true);
+        showToast('success', 'Booking ID copied!');
         setTimeout(() => setIsCopied(false), 2000);
       } catch (err) {
         console.error('Failed to copy', err);
@@ -261,8 +272,9 @@ export const BookingSummary: React.FC = () => {
         status: isPaid ? 'CONFIRMED' : 'PENDING'
       });
       setConfirmedBooking(newBooking);
+      showToast('success', 'Booking confirmed successfully!');
     } catch (error) {
-      alert('Booking failed. The room may no longer be available for these dates.');
+      showToast('error', 'Booking failed. The room may no longer be available for these dates.');
       setIsSubmitting(false);
     }
   };

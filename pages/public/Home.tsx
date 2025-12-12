@@ -5,6 +5,7 @@ import { Button } from '../../components/Button';
 import { ImageWithSkeleton } from '../../components/ImageWithSkeleton';
 import { RoomDetailsModal } from '../../components/RoomDetailsModal';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import { useNavigate } from 'react-router-dom';
 import { Users, Wifi, Car, Calendar, Star, Coffee, Waves, Loader2, AlertCircle, Info } from 'lucide-react';
 
@@ -19,6 +20,7 @@ const HERO_IMAGES = [
 
 export const Home: React.FC = () => {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const [rooms, setRooms] = useState<RoomType[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
@@ -41,10 +43,14 @@ export const Home: React.FC = () => {
 
   useEffect(() => {
     const init = async () => {
-      const [r, f, rv] = await Promise.all([getRooms(), getFacilities(), getReviews()]);
-      setRooms(r);
-      setFacilities(f);
-      setReviews(rv);
+      try {
+        const [r, f, rv] = await Promise.all([getRooms(), getFacilities(), getReviews()]);
+        setRooms(r);
+        setFacilities(f);
+        setReviews(rv);
+      } catch (error) {
+        showToast('error', 'Failed to load hotel content. Please refresh the page.');
+      }
     };
     init();
 
@@ -61,7 +67,7 @@ export const Home: React.FC = () => {
       clearInterval(timer);
       window.removeEventListener('scroll', handleScroll);
     };
-  }, []);
+  }, [showToast]);
 
   const getNextDay = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -69,12 +75,61 @@ export const Home: React.FC = () => {
     return date.toISOString().split('T')[0];
   };
 
+  const handleCheckInChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newCheckIn = e.target.value;
+    if (!newCheckIn) return;
+
+    const startDate = new Date(newCheckIn);
+    const endDate = new Date(dates.checkOut);
+
+    // Auto-adjust check-out if check-in is >= check-out
+    if (startDate >= endDate) {
+      const newCheckOutDate = new Date(startDate);
+      newCheckOutDate.setDate(newCheckOutDate.getDate() + 1);
+      const newCheckOut = newCheckOutDate.toISOString().split('T')[0];
+      
+      setDates({ checkIn: newCheckIn, checkOut: newCheckOut });
+      showToast('info', 'Check-out date adjusted automatically.');
+    } else {
+      setDates(prev => ({ ...prev, checkIn: newCheckIn }));
+    }
+    setDateError('');
+  };
+
+  const handleCheckOutChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newCheckOut = e.target.value;
+    if (!newCheckOut) return;
+
+    setDates(prev => ({ ...prev, checkOut: newCheckOut }));
+    
+    // Validate immediately
+    const startDate = new Date(dates.checkIn);
+    const endDate = new Date(newCheckOut);
+    
+    if (endDate <= startDate) {
+      setDateError('Check-out must be after check-in.');
+    } else {
+      setDateError('');
+    }
+  };
+
   const validateDates = () => {
     const start = new Date(dates.checkIn);
     const end = new Date(dates.checkOut);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const checkInDate = new Date(dates.checkIn);
+    checkInDate.setHours(0,0,0,0);
+
+    if (checkInDate < today) {
+       setDateError('Check-in date cannot be in the past.');
+       showToast('error', 'Please select a valid future date.');
+       return false;
+    }
     
     if (end <= start) {
       setDateError('Check-out date must be after check-in date.');
+      showToast('error', 'Invalid date range selected.');
       return false;
     }
     setDateError('');
@@ -85,11 +140,22 @@ export const Home: React.FC = () => {
     if (!validateDates()) return;
 
     setIsSearching(true);
-    const unavailable = await checkAvailability(dates.checkIn, dates.checkOut);
-    const allIds = (await getRooms()).map(r => r.id);
-    const available = allIds.filter(id => !unavailable.includes(id));
-    setAvailableRoomIds(available);
-    setIsSearching(false);
+    try {
+      const unavailable = await checkAvailability(dates.checkIn, dates.checkOut);
+      const allIds = (await getRooms()).map(r => r.id);
+      const available = allIds.filter(id => !unavailable.includes(id));
+      setAvailableRoomIds(available);
+      
+      if (available.length === 0) {
+        showToast('info', 'No residences available for selected dates.');
+      } else {
+        showToast('success', `Found ${available.length} available residences.`);
+      }
+    } catch (error) {
+      showToast('error', 'Availability check failed. Please try again.');
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const handleBook = (room: RoomType) => {
@@ -174,10 +240,7 @@ export const Home: React.FC = () => {
                    className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none transition-all shadow-lg"
                    value={dates.checkIn}
                    min={new Date().toISOString().split('T')[0]}
-                   onChange={e => {
-                     setDates(prev => ({...prev, checkIn: e.target.value}));
-                     setDateError('');
-                   }}
+                   onChange={handleCheckInChange}
                  />
                </div>
              </div>
@@ -191,10 +254,7 @@ export const Home: React.FC = () => {
                    className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none transition-all shadow-lg"
                    value={dates.checkOut}
                    min={getNextDay(dates.checkIn)}
-                   onChange={e => {
-                     setDates(prev => ({...prev, checkOut: e.target.value}));
-                     setDateError('');
-                   }}
+                   onChange={handleCheckOutChange}
                  />
                </div>
              </div>
