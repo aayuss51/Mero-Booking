@@ -39,7 +39,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode, requiredRole?: UserR
 };
 
 const LayoutWithChat: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <>
+  <div className="flex flex-col min-h-screen">
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm backdrop-blur-md bg-white/90">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-3 group">
@@ -57,9 +57,16 @@ const LayoutWithChat: React.FC<{ children: React.ReactNode }> = ({ children }) =
         </div>
       </div>
     </nav>
-    <main>{children}</main>
+    <main className="flex-1">{children}</main>
+    <footer className="bg-white border-t border-gray-100 py-6 mt-auto">
+        <div className="max-w-7xl mx-auto px-6 text-center">
+            <p className="text-gray-500 text-sm font-medium">
+                copyright &copy;2025 <span className="text-blue-600 font-bold">Nova IT Solutions</span>
+            </p>
+        </div>
+    </footer>
     <ConciergeChat />
-  </>
+  </div>
 );
 
 const PublicNav = () => {

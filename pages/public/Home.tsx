@@ -3,9 +3,10 @@ import { getRooms, getFacilities, checkAvailability, getReviews } from '../../se
 import { RoomType, Facility, Review } from '../../types';
 import { Button } from '../../components/Button';
 import { ImageWithSkeleton } from '../../components/ImageWithSkeleton';
+import { RoomDetailsModal } from '../../components/RoomDetailsModal';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Users, Wifi, Car, Calendar, Star, Coffee, Waves, Loader2, AlertCircle } from 'lucide-react';
+import { Users, Wifi, Car, Calendar, Star, Coffee, Waves, Loader2, AlertCircle, Info } from 'lucide-react';
 
 // Curated High-End Luxury Images
 const HERO_IMAGES = [
@@ -33,6 +34,10 @@ export const Home: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [scrollY, setScrollY] = useState(0);
+
+  // Modal State
+  const [selectedRoomDetails, setSelectedRoomDetails] = useState<RoomType | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -91,6 +96,11 @@ export const Home: React.FC = () => {
     if (!validateDates()) return;
 
     navigate(`/book?roomId=${room.id}&checkIn=${dates.checkIn}&checkOut=${dates.checkOut}`);
+  };
+
+  const handleViewDetails = (room: RoomType) => {
+    setSelectedRoomDetails(room);
+    setIsDetailsModalOpen(true);
   };
 
   const getRoomRating = (roomId: string) => {
@@ -313,11 +323,11 @@ export const Home: React.FC = () => {
 
                       <div className="flex flex-col gap-3 mt-auto">
                         <Button 
-                          onClick={() => handleBook(room)} 
+                          onClick={() => handleViewDetails(room)} 
                           variant="secondary"
                           className="w-full py-4 text-sm tracking-wide font-semibold bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors rounded-xl flex items-center justify-center gap-2"
                         >
-                          Book This Room
+                          <Info size={16} /> About this Room
                         </Button>
                         <Button 
                           onClick={() => handleBook(room)} 
@@ -334,6 +344,20 @@ export const Home: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Room Details Modal */}
+      {selectedRoomDetails && (
+        <RoomDetailsModal
+          isOpen={isDetailsModalOpen}
+          onClose={() => setIsDetailsModalOpen(false)}
+          room={selectedRoomDetails}
+          facilities={facilities}
+          onBook={(r) => {
+             setIsDetailsModalOpen(false);
+             handleBook(r);
+          }}
+        />
+      )}
     </div>
   );
 };

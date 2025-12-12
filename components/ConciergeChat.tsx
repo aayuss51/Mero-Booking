@@ -140,7 +140,7 @@ export const ConciergeChat: React.FC = () => {
           </div>
           <div className="flex flex-col">
               <h3 className="font-semibold tracking-wide text-sm leading-none">Mero Support</h3>
-              <span className="text-[10px] text-amber-100 opacity-90 mt-0.5">AI Concierge</span>
+              <span className="text-[10px] text-amber-100 opacity-90 mt-0.5">Official Chat Support</span>
           </div>
         </div>
         <div className="flex items-center gap-1">

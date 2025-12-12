@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getUserBookings, getRooms, updateBookingStatus, updateBookingDetails } from '../../services/mockDb';
 import { Booking, RoomType } from '../../types';
-import { Calendar, BedDouble, CheckCircle, Clock, XCircle, RefreshCw, CheckCheck, History, AlertTriangle, Loader2, Pencil, LogOut } from 'lucide-react';
+import { Calendar, BedDouble, CheckCircle, Clock, XCircle, RefreshCw, CheckCheck, History, AlertTriangle, Loader2, Pencil, LogOut, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/Button';
 import { ImageWithSkeleton } from '../../components/ImageWithSkeleton';
@@ -11,6 +11,13 @@ import { saveReview, getReviews } from '../../services/mockDb';
 import { Review } from '../../types';
 import { EditBookingModal } from '../../components/EditBookingModal';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
+
+// Helper to ensure check-out is after check-in
+const getNextDay = (dateStr: string) => {
+  const date = new Date(dateStr);
+  date.setDate(date.getDate() + 1);
+  return date.toISOString().split('T')[0];
+};
 
 const getStatusColor = (status: string) => {
   switch(status) {
@@ -46,6 +53,7 @@ interface BookingCardProps {
   onEdit: (booking: Booking) => void;
   onReview: (booking: Booking) => void;
   onCheckout: (id: string) => void;
+  onCheckOutChange: (id: string, newDate: string) => void;
   isHistory?: boolean;
   canReview?: boolean;
 }
@@ -57,6 +65,7 @@ const BookingCard: React.FC<BookingCardProps> = ({
   onEdit, 
   onReview, 
   onCheckout,
+  onCheckOutChange,
   isHistory = false, 
   canReview = false
 }) => {
@@ -129,10 +138,29 @@ const BookingCard: React.FC<BookingCardProps> = ({
             <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Check In</p>
             <p className={`font-semibold mt-1 ${isHistory ? 'text-gray-500' : 'text-gray-900'}`}>{booking.checkIn}</p>
           </div>
-          <div className={`p-3 rounded-xl border ${isHistory ? 'bg-transparent border-gray-200' : 'bg-gray-50/50 border-gray-100'}`}>
-            <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Check Out</p>
-            <p className={`font-semibold mt-1 ${isHistory ? 'text-gray-500' : 'text-gray-900'}`}>{booking.checkOut}</p>
+          
+          {/* Editable Check Out */}
+          <div className={`p-3 rounded-xl border ${isHistory ? 'bg-transparent border-gray-200' : 'bg-gray-50/50 border-gray-100 relative group'}`}>
+            <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest flex items-center gap-1">
+              Check Out
+              {canEdit && <Pencil size={10} className="text-blue-500 opacity-50" />}
+            </p>
+            {canEdit ? (
+              <input 
+                type="date"
+                className="mt-1 w-full bg-white border border-gray-300 text-gray-900 text-sm rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block p-1 shadow-sm transition-all cursor-pointer hover:border-blue-300"
+                value={booking.checkOut}
+                min={getNextDay(booking.checkIn)}
+                onChange={(e) => {
+                   if (e.target.value) onCheckOutChange(booking.id, e.target.value);
+                }}
+                title="Change check-out date"
+              />
+            ) : (
+              <p className={`font-semibold mt-1 ${isHistory ? 'text-gray-500' : 'text-gray-900'}`}>{booking.checkOut}</p>
+            )}
           </div>
+
           <div className={`p-3 rounded-xl border ${isHistory ? 'bg-transparent border-gray-200' : 'bg-gray-50/50 border-gray-100'}`}>
             <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Total Price</p>
             <p className={`font-bold mt-1 ${isHistory ? 'text-gray-500' : 'text-blue-600'}`}>NPR {booking.totalPrice.toLocaleString()}</p>
@@ -151,9 +179,9 @@ const BookingCard: React.FC<BookingCardProps> = ({
                  size="sm"
                  onClick={() => onEdit(booking)}
                  className="rounded-lg border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-200"
-                 title="Edit booking dates (Available up to 24h before check-in)"
+                 title="Edit full booking details (Available up to 24h before check-in)"
                >
-                 <Pencil size={14} className="mr-2" /> Edit Details
+                 <Pencil size={14} className="mr-2" /> Full Edit
                </Button>
              )}
 
@@ -219,6 +247,11 @@ export const MyBookings: React.FC = () => {
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedBookingForEdit, setSelectedBookingForEdit] = useState<{booking: Booking, room: RoomType} | null>(null);
+
+  // Quick Date Change State
+  const [dateUpdateData, setDateUpdateData] = useState<{id: string, newDate: string, oldPrice: number, newPrice: number} | null>(null);
+  const [isDateUpdateModalOpen, setIsDateUpdateModalOpen] = useState(false);
+  const [isProcessingDateUpdate, setIsProcessingDateUpdate] = useState(false);
 
   const fetchData = async (showGlobalLoading = true) => {
     if (user) {
@@ -298,6 +331,49 @@ export const MyBookings: React.FC = () => {
       await fetchData(false);
     }
   };
+
+  // --- New Logic for Inline Check-out Date Change ---
+  const handleCheckOutChange = (id: string, newDate: string) => {
+    const booking = bookings.find(b => b.id === id);
+    const room = rooms.find(r => r.id === booking?.roomId);
+    if (!booking || !room) return;
+
+    const start = new Date(booking.checkIn);
+    const end = new Date(newDate);
+    
+    // Safety: Date input min attribute handles UI, but double check logic
+    if (end <= start) return;
+
+    const nights = Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24));
+    const base = nights * room.pricePerNight;
+    const tax = base * 0.13;
+    const newPrice = Math.floor(base + tax);
+
+    setDateUpdateData({
+      id,
+      newDate,
+      oldPrice: booking.totalPrice,
+      newPrice
+    });
+    setIsDateUpdateModalOpen(true);
+  };
+
+  const confirmDateUpdate = async () => {
+    if (!dateUpdateData) return;
+    setIsProcessingDateUpdate(true);
+    
+    // Retrieve current checkIn from booking list to be safe
+    const booking = bookings.find(b => b.id === dateUpdateData.id);
+    if (booking) {
+        await updateBookingDetails(dateUpdateData.id, { checkIn: booking.checkIn, checkOut: dateUpdateData.newDate });
+        await fetchData(false);
+    }
+    
+    setIsProcessingDateUpdate(false);
+    setIsDateUpdateModalOpen(false);
+    setDateUpdateData(null);
+  };
+  // --------------------------------------------------
 
   const handleReviewClick = (booking: Booking) => {
     const existing = reviews.find(r => r.bookingId === booking.id);
@@ -410,6 +486,7 @@ export const MyBookings: React.FC = () => {
                     onEdit={handleEditClick}
                     onReview={() => {}} // Can't review active bookings
                     onCheckout={handleCheckoutClick}
+                    onCheckOutChange={handleCheckOutChange}
                     isHistory={false}
                   />
                 ))}
@@ -448,6 +525,7 @@ export const MyBookings: React.FC = () => {
                       onEdit={() => {}} // Can't edit history
                       onReview={handleReviewClick}
                       onCheckout={() => {}} // Can't checkout history
+                      onCheckOutChange={() => {}} // Can't change history check-out
                       canReview={checkReviewEligibility(b)}
                       isHistory={true} 
                     />
@@ -498,9 +576,20 @@ export const MyBookings: React.FC = () => {
         onClose={() => setIsCheckoutModalOpen(false)}
         onConfirm={handleConfirmCheckout}
         title="Confirm Check Out"
-        message="Are you sure you want to checkout? This will complete your stay and move the booking to history."
+        message="Are you sure you want to checkout?"
         confirmLabel="Yes, Check Out"
         isProcessing={isProcessingCheckout}
+      />
+
+      {/* Confirmation Modal for Check-out Date Change */}
+      <ConfirmationModal
+        isOpen={isDateUpdateModalOpen}
+        onClose={() => { setIsDateUpdateModalOpen(false); setDateUpdateData(null); }}
+        onConfirm={confirmDateUpdate}
+        title="Update Check-Out Date?"
+        message={dateUpdateData ? `Do you want to change your check-out date to ${dateUpdateData.newDate}? The total price will update from NPR ${dateUpdateData.oldPrice.toLocaleString()} to NPR ${dateUpdateData.newPrice.toLocaleString()}.` : ''}
+        confirmLabel="Yes, Update Booking"
+        isProcessing={isProcessingDateUpdate}
       />
     </div>
   );
